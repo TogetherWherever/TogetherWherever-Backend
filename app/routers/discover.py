@@ -128,7 +128,7 @@ async def discover_place_details(dest_id: str = Query(..., min_length=1)) -> Dic
         "destID": dest_id,
         "destName": response.get("displayName")["text"],
         "destType": response.get("types"),
-        "desc": response.get("editorialSummary"),
+        "desc": response.get("editorialSummary")["text"],
         "rating": response.get("rating"),
         "address": response.get("formattedAddress"),
         "phoneNum": response.get("internationalPhoneNumber"),
