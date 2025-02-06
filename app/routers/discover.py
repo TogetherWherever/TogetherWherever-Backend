@@ -80,7 +80,7 @@ async def get_nearby_places(lat: float, lon: float) -> List[Dict]:
 
         place_data = {
             "destID": place.get("id"),
-            "destName": place.get("displayName"),
+            "destName": place.get("displayName")["text"],
             "rating": place.get("rating"),
             "photos": photos[0]
         }
@@ -126,13 +126,13 @@ async def discover_place_details(dest_id: str = Query(..., min_length=1)) -> Dic
 
     return {
         "destID": dest_id,
-        "destName": response.get("displayName"),
+        "destName": response.get("displayName")["text"],
         "destType": response.get("types"),
         "desc": response.get("editorialSummary"),
         "rating": response.get("rating"),
         "address": response.get("formattedAddress"),
         "phoneNum": response.get("internationalPhoneNumber"),
-        "openHr": response.get("regularOpeningHours"),
+        # "openHr": response.get("regularOpeningHours"),
         "fac": {
             "goodForChildren": response.get("goodForChildren"),
             "accessibility": response.get("accessibilityOptions"),
