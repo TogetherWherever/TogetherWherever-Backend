@@ -61,7 +61,7 @@ async def get_nearby_places(lat: float, lon: float) -> List[Dict]:
     headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
-        'X-Goog-FieldMask': 'places.id,places.displayName,places.rating,places.photos'
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.photos'
     }
 
     res = requests.request("POST", url, headers=headers, data=payload)
@@ -81,7 +81,6 @@ async def get_nearby_places(lat: float, lon: float) -> List[Dict]:
         place_data = {
             "destID": place.get("id"),
             "destName": place.get("displayName")["text"],
-            "rating": place.get("rating"),
             "photos": photos[0]
         }
 
@@ -128,7 +127,7 @@ async def discover_place_details(dest_id: str = Query(..., min_length=1)) -> Dic
         "destID": dest_id,
         "destName": response.get("displayName")["text"],
         "destType": response.get("types"),
-        "desc": response.get("editorialSummary")["text"],
+        "desc": response.get("editorialSummary")["text"] if response.get("editorialSummary") else "",
         "rating": response.get("rating"),
         "address": response.get("formattedAddress"),
         "phoneNum": response.get("internationalPhoneNumber"),
