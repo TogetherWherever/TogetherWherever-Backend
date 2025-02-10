@@ -9,8 +9,8 @@ TogetherWherever is a web application integrated with AI that recommends places 
 ```
 pip install -r requirements.txt
 ```
-2. To run the app, use:
+2. To run the app on local, use:
 ```
-uvicorn app.main:app
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
-3. Now, you can visit http://127.0.0.1:8000 and explore the API docs: http://127.0.0.1:8000/docs.
+3. Now, you can visit http://0.0.0.0:8000 and explore the API docs: http://0.0.0.0:8000/docs.
