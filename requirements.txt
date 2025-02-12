@@ -1,4 +1,9 @@
-fastapi
+fastapi>=0.115.7
 uvicorn
-python-dotenv
-requests
+python-dotenv>=1.0.1
+requests>=2.32.3
+psycopg2-binary
+sqlalchemy>=2.0.38
+alembic
+typing>=3.7.4.3
+sqlalchemy-utils>=0.41.2
