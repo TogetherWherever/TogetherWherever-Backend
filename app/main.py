@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from database import SessionLocal
-from routers import (
+from app.database import SessionLocal
+from app.routers import (
     discover
 )
 

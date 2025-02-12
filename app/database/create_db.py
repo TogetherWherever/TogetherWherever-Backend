@@ -1,9 +1,8 @@
 from sqlalchemy import inspect
 from sqlalchemy_utils import database_exists, create_database
-from database import DATABASE_URL, engine
-from routers import (
-    models
-)
+
+from app.models import Base
+from connection import DATABASE_URL, engine
 
 
 def check_tables():
@@ -40,7 +39,7 @@ def setup_database():
 
     # Create tables if they do not exist
     print("Checking and creating tables...")
-    models.Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
     check_tables()
 
 
