@@ -7,6 +7,11 @@ from routers import (
 
 
 def check_tables():
+    """
+    Check if required tables exist in the database.
+
+    :return: None
+    """
     inspector = inspect(engine)
     tables = inspector.get_table_names()
 
@@ -20,6 +25,11 @@ def check_tables():
 
 
 def setup_database():
+    """
+    Set up the database by creating it if it does not exist and creating tables if they do not exist.
+
+    :return: None
+    """
     # Check if the database exists, create it if not
     if not database_exists(DATABASE_URL):
         print("Database does not exist. Creating database...")
