@@ -2,7 +2,7 @@ from sqlalchemy import inspect
 from sqlalchemy_utils import database_exists, create_database
 
 from app.models import Base
-from connection import DATABASE_URL, engine
+from app.database.connection import DATABASE_URL, engine
 
 
 def check_tables():
@@ -14,7 +14,7 @@ def check_tables():
     inspector = inspect(engine)
     tables = inspector.get_table_names()
 
-    required_tables = {"trips", "trip_days", "activities"}
+    required_tables = {"trips", "trip_days", "activities", "users"}
     missing_tables = required_tables - set(tables)
 
     if missing_tables:
