@@ -7,3 +7,5 @@ sqlalchemy>=2.0.38
 alembic
 typing>=3.7.4.3
 sqlalchemy-utils>=0.41.2
+pydantic>=2.10.6
+webauthn>=2.5.1

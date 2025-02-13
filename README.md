@@ -13,7 +13,7 @@ pip install -r requirements.txt
 Please refer to the `example.env` file to see the required environment variables.  
 3. Now, we will need to set up the database. You can do this by running the following command:
 ```
-python app/create_db.py
+python -m app.database.create_db.py
 ```
 4. To run the app on local, use:
 ```
