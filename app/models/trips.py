@@ -22,12 +22,14 @@ class Trips(Base):
 
     trip_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     # user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+    owner = Column(String)
     trip_name = Column(String)
     dest_name = Column(String)
     dest_id = Column(String, nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     duration = Column(Integer)  # Number of days
+    companion = Column(String, nullable=False)
 
     # Relationship with TripDays
     trip_days = relationship("TripDays", back_populates="trip")
