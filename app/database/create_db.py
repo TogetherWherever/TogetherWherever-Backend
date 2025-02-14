@@ -2,8 +2,7 @@ from sqlalchemy import inspect
 from sqlalchemy_utils import database_exists, create_database
 
 from app.models import Base
-from connection import DATABASE_URL, engine
-
+from app.database.connection import DATABASE_URL, engine
 
 def check_tables():
     """
