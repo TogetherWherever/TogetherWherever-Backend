@@ -2,7 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import SessionLocal
 from app.routers import (
-    discover
+    discover,
+    create_new_trip
 )
 
 app = FastAPI()
@@ -17,16 +18,8 @@ app.add_middleware(
 )
 
 
-# Dependency to get DB session
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
 app.include_router(discover.router)
+app.include_router(create_new_trip.router)
 
 
 @app.get("/")

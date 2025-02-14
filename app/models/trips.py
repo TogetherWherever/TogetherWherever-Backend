@@ -20,7 +20,7 @@ class Trips(Base):
     """
     __tablename__ = "trips"
 
-    trip_id = Column(Integer, primary_key=True, index=True)
+    trip_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     # user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
     owner = Column(String)
     trip_name = Column(String)

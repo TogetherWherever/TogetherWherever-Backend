@@ -3,8 +3,8 @@ from pydantic import BaseModel, Field
 from typing import List
 from datetime import date
 from sqlalchemy.orm import Session
-from database import get_db
-from models.trips import Trips
+from app.database import get_db
+from app.models.trips import Trips
 from fastapi.responses import JSONResponse
 
 router = APIRouter(prefix="/api/create-new-trip", tags=["create-new-trip"])
@@ -46,10 +46,6 @@ async def create_new_trip(trip: NewTrip, response: Response, db: Session = Depen
         db.add(new_trip)
         db.commit()
         db.refresh(new_trip)
-
-        # Set custom headers in the response
-        response.headers["X-Trip-Created"] = "true"
-        response.headers["Location"] = f"/api/trips/{new_trip.trip_id}"
 
         # Return a JSON response with a success message and the trip ID
         return JSONResponse(content={"message": "Trip created successfully", "trip_id": new_trip.trip_id})
