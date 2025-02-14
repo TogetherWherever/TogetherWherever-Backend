@@ -27,6 +27,10 @@ def get_user_by_username(db: Session, username: str):
     return db.query(User).filter(User.username == username).first()
 
 
+def get_user_by_email(db: Session, email: str):
+    return db.query(User).filter(User.email == email).first()
+
+
 def create_user(db: Session, user: UserCreate):
     hashed_password = pwd_context.hash(user.password)
     db_user = User(
@@ -46,7 +50,10 @@ def create_user(db: Session, user: UserCreate):
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = get_user_by_username(db, username=user.username)
     if db_user:
-        raise HTTPException(status_code=400, detail="Username already registered")
+        raise HTTPException(status_code=400, detail=f"Username '{user.username}' is already registered")
+    db_user = get_user_by_email(db, email=user.email)
+    if db_user:
+        raise HTTPException(status_code=400, detail=f"Email '{user.email}' is already registered")
     return create_user(db=db, user=user)
 
 
