@@ -1,3 +1,5 @@
+import os
+
 from fastapi import Depends, HTTPException, APIRouter, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -5,11 +7,14 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
 from typing import Dict
+from dotenv import load_dotenv
 
 from app.database import get_db
 from app.models import User
 
 from app.schemas.user import UserCreate
+
+load_dotenv()
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -18,9 +23,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # JWT secret and algorithm
-SECRET_KEY = "c2e4b5a4b4b0a8b8d4d8c4e8b8c4b4b5"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM")
+ACCESS_TOKEN_EXPIRE_MINUTES = float(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES"))
 
 
 def get_user_by_username(db: Session, username: str):
