@@ -29,7 +29,7 @@ class Trips(Base):
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     duration = Column(Integer)  # Number of days
-    companion = Column(String, nullable=False)
+    companion = Column(String)
 
     # Relationship with TripDays
     trip_days = relationship("TripDays", back_populates="trip")
