@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
-from typing import Dict
+from typing import Dict, Optional
 from dotenv import load_dotenv
 
 from app.database import get_db
@@ -73,7 +73,7 @@ def authenticate_user(username: str, password: str, db: Session):
 
 
 # Create access token
-def create_access_token(data: Dict, expires_delta: timedelta | None = None):
+def create_access_token(data: Dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
