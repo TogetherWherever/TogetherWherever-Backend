@@ -7,3 +7,9 @@ sqlalchemy>=2.0.38
 alembic
 typing>=3.7.4.3
 sqlalchemy-utils>=0.41.2
+passlib>=1.7.4
+python-jose>=3.3.0
+pydantic>=2.10.6
+python-multipart
+bcrypt
+cryptography

@@ -20,7 +20,7 @@ class Trips(Base):
     """
     __tablename__ = "trips"
 
-    trip_id = Column(Integer, primary_key=True, index=True)
+    trip_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     # user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
     trip_name = Column(String)
     dest_name = Column(String)
@@ -44,7 +44,7 @@ class TripDays(Base):
     """
     __tablename__ = "trip_days"
 
-    trip_day_id = Column(Integer, primary_key=True, index=True)
+    trip_day_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     trip_id = Column(Integer, ForeignKey("trips.trip_id"), nullable=False)
     day_number = Column(Integer, nullable=False)  # Day 1, Day 2 etc.
     date = Column(Date)
@@ -70,7 +70,7 @@ class Activities(Base):
     """
     __tablename__ = "activities"
 
-    activity_id = Column(Integer, primary_key=True, index=True)
+    activity_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     trip_day_id = Column(Integer, ForeignKey("trip_days.trip_day_id"), nullable=False)
     activity_dest_id = Column(String, nullable=False)
     activity_dest_name = Column(String)
