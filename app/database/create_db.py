@@ -1,8 +1,8 @@
 from sqlalchemy import inspect
 from sqlalchemy_utils import database_exists, create_database
 
-from app.models import Base
 from app.database.connection import DATABASE_URL, engine
+from app.models import Base
 
 
 def check_tables():

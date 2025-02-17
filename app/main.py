@@ -3,7 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import (
     discover,
-    auth
+    auth,
+    create_new_trip
 )
 
 app = FastAPI()
@@ -19,6 +20,7 @@ app.add_middleware(
 
 app.include_router(discover.router)
 app.include_router(auth.router)
+app.include_router(create_new_trip.router)
 
 
 @app.get("/")

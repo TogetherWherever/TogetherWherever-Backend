@@ -1,17 +1,16 @@
 import os
+from datetime import datetime, timedelta
+from typing import Dict, Optional
 
+from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, APIRouter, status
-from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
-from datetime import datetime, timedelta
 from passlib.context import CryptContext
-from typing import Dict, Optional
-from dotenv import load_dotenv
+from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import User
-
 from app.schemas.user import UserCreate
 
 load_dotenv()

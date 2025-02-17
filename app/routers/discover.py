@@ -1,10 +1,11 @@
 import asyncio
-import os
-import requests
 import json
+import os
 from typing import List, Dict
-from fastapi import APIRouter, HTTPException, Query
+
+import requests
 from dotenv import load_dotenv
+from fastapi import APIRouter, HTTPException, Query
 
 load_dotenv()
 
