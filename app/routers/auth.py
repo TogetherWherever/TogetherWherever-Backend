@@ -37,13 +37,17 @@ def get_user_by_email(db: Session, email: str):
 
 def create_user(db: Session, user: UserCreate):
     hashed_password = pwd_context.hash(user.password)
+
+    # Convert list to comma-separated string
+    user_preferences = ",".join(user.preferences)
+
     db_user = User(
         username=user.username,
         hashed_password=hashed_password,
         email=user.email,
         first_name=user.first_name,
         last_name=user.last_name,
-        preferences=user.preferences
+        preferences=user_preferences
     )
     db.add(db_user)
     db.commit()
