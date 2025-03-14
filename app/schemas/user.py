@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import List
 
 
 class UserCreate(BaseModel):
@@ -10,9 +11,11 @@ class UserCreate(BaseModel):
     first_name: First name of the user
     last_name: Last name of the user
     password: Password of the user
+    preferences: User preferences
     """
     username: str
     email: str
     first_name: str
     last_name: str
     password: str
+    preferences: List[str]

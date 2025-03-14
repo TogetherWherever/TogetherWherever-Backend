@@ -15,3 +15,4 @@ class User(Base):
     first_name = Column(String)
     last_name = Column(String)
     hashed_password = Column(String)
+    preferences = Column(String)

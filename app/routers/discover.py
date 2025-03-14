@@ -40,6 +40,16 @@ async def get_nearby_places(lat: float, lon: float) -> List[Dict]:
     """
     url = "https://places.googleapis.com/v1/places:searchNearby"
     payload = json.dumps({
+        # Exclude certain place types to avoid irrelevant results
+        "excludedTypes": ["car_dealer", "car_rental", "car_repair", "car_wash", "electric_vehicle_charging_station",
+                          "gas_station", "parking", "rest_stop", "city_hall", "courthouse", "embassy", "fire_station",
+                          "government_office", "local_government_office", "police", "post_office", "chiropractor",
+                          "dental_clinic", "dentist", "doctor", "drugstore", "hospital", "pharmacy", "physiotherapist",
+                          "medical_lab", "apartment_building", "apartment_complex", "condominium_complex",
+                          "housing_complex", "bed_and_breakfast", "hotel", "motel", "lodging", "accounting", "atm",
+                          "bank", "funeral_home", "insurance_agency", "lawyer", "real_estate_agency", "storage",
+                          "telecommunications_service_provider", "department_store", "electronics_store",
+                          "grocery_store", "hardware_store", "supermarket", "warehouse_store", "airport", "train_station"],
         "maxResultCount": 8,
         "locationRestriction": {
             "circle": {
