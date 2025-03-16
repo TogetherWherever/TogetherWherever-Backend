@@ -23,13 +23,17 @@ def get_travel_group_preferences(trip_id: int) -> pd.DataFrame:
     travel_group = [int(companion_id) for companion_id in companion_ids]
 
     # Get the preferences of the travel group
-    travel_group_preferences = db.query(User).filter(User.user_id.in_(travel_group)).all()
+    travel_group_preferences = (
+        db.query(User).filter(User.user_id.in_(travel_group)).all()
+    )
 
     # Convert to DataFrame with correct structure
-    travel_group_preferences_df = pd.DataFrame([
-        {"UserId": user.user_id, "Preferences": user.preferences}
-        for user in travel_group_preferences
-    ])
+    travel_group_preferences_df = pd.DataFrame(
+        [
+            {"UserId": user.user_id, "Preferences": user.preferences}
+            for user in travel_group_preferences
+        ]
+    )
 
     return travel_group_preferences_df
 
@@ -62,7 +66,7 @@ def extract_group_profile(encoded_travel_group):
         )
         frequent_size_one = frequent_itemsets[
             frequent_itemsets["itemsets"].apply(len) == 1
-            ]
+        ]
         return frequent_size_one
     else:
         preferences = list(encoded_travel_group.columns)
