@@ -1,9 +1,11 @@
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.trips import Trips
-from app.schemas.new_trip import CreateNewTrip
+from app.models import Trips, TripDays
+from app.schemas import CreateNewTrip
 
 router = APIRouter(prefix="/api/create-new-trip", tags=["create-new-trip"])
 
@@ -33,6 +35,18 @@ async def create_new_trip(trip: CreateNewTrip, db: Session = Depends(get_db)):
         db.add(new_trip)
         db.commit()
         db.refresh(new_trip)
+
+        # Create trip days
+        for day in range(trip.duration):
+            new_trip_day = TripDays(
+                trip_id=new_trip.trip_id,
+                day_number=day + 1,
+                date=trip.start_date + timedelta(days=day + 1)
+            )
+
+            db.add(new_trip_day)
+            db.commit()
+            db.refresh(new_trip_day)
 
         return {"message": "Trip created successfully", "trip_id": new_trip.trip_id}
 
