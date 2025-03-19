@@ -32,7 +32,10 @@ class Trips(Base):
     companion = Column(String)
 
     # Relationship with TripDays
-    trip_days = relationship("TripDays", back_populates="trip")
+    trip_days = relationship("TripDays", back_populates="trips")
+
+    # Relationship with User
+    users = relationship("User", back_populates="trips")
 
 
 class TripDays(Base):
@@ -55,7 +58,10 @@ class TripDays(Base):
     trip = relationship("Trips", back_populates="trip_days")
 
     # Relationship with Activities
-    activities = relationship("Activities", back_populates="trip_day")
+    activities = relationship("Activities", back_populates="trip_days")
+
+    # Relationship with Vote
+    votes = relationship("Vote", back_populates="trip_days")
 
 
 class Activities(Base):
