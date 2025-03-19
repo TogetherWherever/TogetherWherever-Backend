@@ -21,8 +21,8 @@ class Trips(Base):
     __tablename__ = "trips"
 
     trip_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
-    owner = Column(String)
+    # user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+    owner = Column(String, ForeignKey("users.username"), nullable=False)
     trip_name = Column(String)
     dest_name = Column(String)
     dest_id = Column(String, nullable=False)
@@ -33,9 +33,6 @@ class Trips(Base):
 
     # Relationship with TripDays
     trip_days = relationship("TripDays", back_populates="trip")
-
-    # Relationship with Users
-    user = relationship("User", back_populates="trips")
 
 
 class TripDays(Base):
