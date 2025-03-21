@@ -1,5 +1,6 @@
 import json
 import os
+from typing import List
 
 import pandas as pd
 import requests
@@ -57,7 +58,7 @@ def one_hot_encode_preferences(travel_group: pd.DataFrame):
     one_hot = pd.DataFrame(0, index=travel_group.index, columns=unique_attractions)
 
     for idx, row in travel_group.iterrows():
-        preferences = row["Preferences"].split(", ")
+        preferences = row["Preferences"].split(",")
         for pref in preferences:
             one_hot.at[idx, pref] = 1
 
@@ -104,7 +105,7 @@ def get_nearby_destinations_from_api(lat: float, lon: float) -> pd.DataFrame:
                           "telecommunications_service_provider", "department_store", "electronics_store",
                           "grocery_store", "hardware_store", "supermarket", "warehouse_store", "airport",
                           "train_station"],
-        "maxResultCount": 10,
+        "maxResultCount": 20,
         "locationRestriction": {
             "circle": {
                 "center": {
@@ -129,18 +130,19 @@ def get_nearby_destinations_from_api(lat: float, lon: float) -> pd.DataFrame:
 
     nearby_places_df = pd.DataFrame(
         [
-            {"AttractionId": place.get('id'), "Attraction": place.get('displayName')["text"],
-             "AttractionType": place.get('types')}
+            {
+                "AttractionId": place.get('id'),
+                "Attraction": place.get('displayName')["text"],
+                "AttractionType": ",".join(place.get('types'))  # Convert list of types to comma-separated string
+            }
             for place in response.get("places", [])
         ]
     )
 
-    print(nearby_places_df)
-
     return nearby_places_df
 
 
-def get_suitable_destinations(destinations: pd.DataFrame, group_profile: pd.DataFrame) -> pd.DataFrame:
+def get_suitable_destinations(destinations: pd.DataFrame, group_profile: List) -> pd.DataFrame:
     # get recommended attractions
     mask = destinations["AttractionType"].isin(group_profile)
     matched_attractions = destinations[mask]
