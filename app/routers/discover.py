@@ -88,6 +88,33 @@ async def get_nearby_places(lat: float, lon: float) -> List[Dict]:
 
     return nearby_places
 
+def open_hours_format(opening_hours: List[Dict]) -> Dict[str, Dict[str, str]]:
+    """
+    Format opening hours from Google Places API.
+    :param opening_hours: Opening hours data
+    :return: Formatted opening hours
+    """
+    if not opening_hours:
+        return {
+            "Sunday": { "open": "00:00", "close": "23:59" },
+            "Monday": { "open": "00:00", "close": "23:59" },
+            "Tuesday": { "open": "00:00", "close": "23:59" },
+            "Wednesday": { "open": "00:00", "close": "23:59" },
+            "Thursday": { "open": "00:00", "close": "23:59" },
+            "Friday": { "open": "00:00", "close": "23:59" },
+            "Saturday": { "open": "00:00", "close": "23:59" }
+        }
+
+    day_names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+
+    formatted_hours = {}
+    for period in opening_hours:
+        day = period["open"]["day"]
+        open_time = f"{period['open']['hour']:02d}:{period['open']['minute']:02d}"
+        close_time = f"{period['close']['hour']:02d}:{period['close']['minute']:02d}"
+        formatted_hours[day_names[day]] = {"open": open_time, "close": close_time}
+
+    return formatted_hours
 
 @router.get("/")
 async def discover_place_details(dest_id: str = Query(..., min_length=1)) -> Dict:
@@ -96,7 +123,7 @@ async def discover_place_details(dest_id: str = Query(..., min_length=1)) -> Dic
     :param dest_id: Google Places Destination ID
     :return: Place details
     """
-    url = f"https://places.googleapis.com/v1/places/{dest_id}?fields=id,displayName,types,editorialSummary,rating,formattedAddress,internationalPhoneNumber,goodForChildren,accessibilityOptions,photos,location"
+    url = f"https://places.googleapis.com/v1/places/{dest_id}?fields=id,displayName,types,editorialSummary,rating,formattedAddress,internationalPhoneNumber,goodForChildren,accessibilityOptions,photos,location,regularOpeningHours"
     headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY
@@ -136,5 +163,6 @@ async def discover_place_details(dest_id: str = Query(..., min_length=1)) -> Dic
         "photos": photos,
         "lat": lat,
         "lon": lon,
-        "nearbyPlaces": nearby_places
+        "nearbyPlaces": nearby_places,
+        "openingHours": open_hours_format(response.get("regularOpeningHours")["periods"] if response.get("regularOpeningHours") else [])
     }
