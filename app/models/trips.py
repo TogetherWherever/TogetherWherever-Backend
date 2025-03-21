@@ -1,6 +1,5 @@
-from sqlalchemy import Column, Integer, String, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, Date, Float, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
 
 # Base is used for model class definitions
 Base = declarative_base()
@@ -26,6 +25,8 @@ class Trips(Base):
     trip_name = Column(String)
     dest_name = Column(String)
     dest_id = Column(String, nullable=False)
+    dest_lat = Column(Float, nullable=False)
+    dest_lon = Column(Float, nullable=False)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     duration = Column(Integer)  # Number of days
