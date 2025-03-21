@@ -25,6 +25,3 @@ class Activities(Base):
     activity_start_time = Column(Time)
     activity_end_time = Column(Time)
     activity_number = Column(Integer)  # Activity 1, Activity 2 etc.
-
-    # Relationship with TripDays
-    trip_day = relationship("TripDays", back_populates="activities")

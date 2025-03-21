@@ -30,9 +30,3 @@ class Trips(Base):
     end_date = Column(Date, nullable=False)
     duration = Column(Integer)  # Number of days
     companion = Column(String)
-
-    # Relationship with TripDays
-    trip_days = relationship("TripDays", back_populates="trips")
-
-    # Relationship with User
-    users = relationship("User", back_populates="trips")

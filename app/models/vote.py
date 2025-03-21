@@ -19,9 +19,3 @@ class Vote(Base):
 
     # Enforce vote_score range
     __table_args__ = (CheckConstraint("vote_score >= 0 AND vote_score <= 10", name="check_vote_score"),)
-
-    # Relationship with User
-    user = relationship("User", back_populates="votes")
-
-    # Relationship with Activities
-    trip_days = relationship("TripDays", back_populates="votes")

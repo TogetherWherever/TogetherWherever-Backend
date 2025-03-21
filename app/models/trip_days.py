@@ -19,12 +19,3 @@ class TripDays(Base):
     trip_id = Column(Integer, ForeignKey("trips.trip_id"), nullable=False)
     day_number = Column(Integer, nullable=False)  # Day 1, Day 2 etc.
     date = Column(Date)
-
-    # Relationship with Trips
-    trip = relationship("Trips", back_populates="trip_days")
-
-    # Relationship with Activities
-    activities = relationship("Activities", back_populates="trip_days")
-
-    # Relationship with Vote
-    votes = relationship("Vote", back_populates="trip_days")
