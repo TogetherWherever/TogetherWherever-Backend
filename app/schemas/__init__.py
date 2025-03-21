@@ -1,2 +1,2 @@
-from new_trip import CreateNewTrip
-from user import UserCreate
+from app.schemas.new_trip import CreateNewTrip
+from app.schemas.user import UserCreate
