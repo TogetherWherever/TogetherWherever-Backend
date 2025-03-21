@@ -1,36 +1,42 @@
-import pandas as pd
-from fastapi import Depends
-from mlxtend.frequent_patterns import apriori
+import json
+import os
 
-from app.database import get_db
+import pandas as pd
+import requests
+from dotenv import load_dotenv
+from fastapi import HTTPException
+from mlxtend.frequent_patterns import apriori
+from sqlalchemy.orm import Session
+
 from app.models import Trips, User
 
-db = Depends(get_db)
+load_dotenv()
+
+GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY")
 
 
-def get_travel_group_preferences(trip_id: int) -> pd.DataFrame:
+def get_travel_group_preferences(trip_id: int, db: Session) -> pd.DataFrame:
     """
     Get the preferences of the travel group.
 
+    :param db: Database session.
     :param trip_id: The ID of the trip.
     :return: DataFrame containing UserId and Preferences columns.
     """
     # Get the companion IDs
     trip = db.query(Trips).filter(Trips.trip_id == trip_id).first()
-    companion_ids = trip.companion.split(",") if trip.companion else []
-    companion_ids.append(str(trip.user_id))  # Ensure consistency in ID format
-
-    travel_group = [int(companion_id) for companion_id in companion_ids]
+    companions = trip.companion.split(",") if trip.companion else []
+    companions += [trip.owner]  # Add the owner to the travel group
 
     # Get the preferences of the travel group
     travel_group_preferences = (
-        db.query(User).filter(User.user_id.in_(travel_group)).all()
+        db.query(User).filter(User.username.in_(companions)).all()
     )
 
     # Convert to DataFrame with correct structure
     travel_group_preferences_df = pd.DataFrame(
         [
-            {"UserId": user.user_id, "Preferences": user.preferences}
+            {"UserId": user.username, "Preferences": user.preferences}
             for user in travel_group_preferences
         ]
     )
@@ -76,6 +82,62 @@ def extract_group_profile(encoded_travel_group: pd.DataFrame) -> pd.DataFrame:
         }
         group_profile = pd.DataFrame(data)
         return group_profile
+
+
+def get_nearby_destinations_from_api(lat: float, lon: float) -> pd.DataFrame:
+    """
+        Get nearby places from Google Places API (Nearby Search).
+        :param lat: Latitude
+        :param lon: Longitude
+        :return: List of nearby places
+        """
+    url = "https://places.googleapis.com/v1/places:searchNearby"
+    payload = json.dumps({
+        # Exclude certain place types to avoid irrelevant results
+        "excludedTypes": ["car_dealer", "car_rental", "car_repair", "car_wash", "electric_vehicle_charging_station",
+                          "gas_station", "parking", "rest_stop", "city_hall", "courthouse", "embassy", "fire_station",
+                          "government_office", "local_government_office", "police", "post_office", "chiropractor",
+                          "dental_clinic", "dentist", "doctor", "drugstore", "hospital", "pharmacy", "physiotherapist",
+                          "medical_lab", "apartment_building", "apartment_complex", "condominium_complex",
+                          "housing_complex", "bed_and_breakfast", "hotel", "corporate_office", "lodging", "accounting",
+                          "atm", "bank", "funeral_home", "insurance_agency", "lawyer", "real_estate_agency", "storage",
+                          "telecommunications_service_provider", "department_store", "electronics_store",
+                          "grocery_store", "hardware_store", "supermarket", "warehouse_store", "airport",
+                          "train_station"],
+        "maxResultCount": 10,
+        "locationRestriction": {
+            "circle": {
+                "center": {
+                    "latitude": lat,
+                    "longitude": lon
+                },
+                "radius": 8000  # Set radius to 8 km
+            }
+        }
+    })
+    headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.types'  # Optimized field mask
+    }
+
+    res = requests.request("POST", url, headers=headers, data=payload)
+    try:
+        response = res.json()
+    except requests.exceptions.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Invalid JSON response from Google Places API")
+
+    nearby_places_df = pd.DataFrame(
+        [
+            {"AttractionId": place.get('id'), "Attraction": place.get('displayName')["text"],
+             "AttractionType": place.get('types')}
+            for place in response.get("places", [])
+        ]
+    )
+
+    print(nearby_places_df)
+
+    return nearby_places_df
 
 
 def get_suitable_destinations(destinations: pd.DataFrame, group_profile: pd.DataFrame) -> pd.DataFrame:
