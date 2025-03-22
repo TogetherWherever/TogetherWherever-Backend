@@ -143,11 +143,22 @@ def get_nearby_destinations_from_api(lat: float, lon: float) -> pd.DataFrame:
 
 
 def get_suitable_destinations(destinations: pd.DataFrame, group_profile: List) -> pd.DataFrame:
-    # get recommended attractions
-    mask = destinations["AttractionType"].isin(group_profile)
-    matched_attractions = destinations[mask]
+    # Encode attraction types
+    attraction_expanded = destinations['AttractionType'].str.split(',', expand=True).stack().reset_index(level=1, drop=True)
+    attraction_expanded.name = 'AttractionType'
+    attractions = destinations.drop(columns=['AttractionType']).join(attraction_expanded)
+    attractions.dropna(inplace=True)
 
-    return matched_attractions
+    # get recommended attractions
+    mask = attractions["AttractionType"].isin(group_profile)
+    matched_attractions = attractions[mask]
+
+    # get unique attraction ids
+    matched_attractions_named = matched_attractions['AttractionId'].unique()
+    matched_attractions_mask = destinations['AttractionId'].isin(matched_attractions_named)
+    matched_attractions_formatted = destinations[matched_attractions_mask]
+
+    return matched_attractions_formatted
 
 
 def get_recommendations(travel_group, destinations):
@@ -156,6 +167,7 @@ def get_recommendations(travel_group, destinations):
     group_profile_lst = list(
         item for itemset in group_profile["itemsets"] for item in itemset
     )
+
     suitable_destinations = get_suitable_destinations(destinations, group_profile_lst)
 
     return suitable_destinations
