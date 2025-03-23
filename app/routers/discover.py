@@ -49,7 +49,8 @@ async def get_nearby_places(lat: float, lon: float) -> List[Dict]:
                           "housing_complex", "bed_and_breakfast", "hotel", "motel", "lodging", "accounting", "atm",
                           "bank", "funeral_home", "insurance_agency", "lawyer", "real_estate_agency", "storage",
                           "telecommunications_service_provider", "department_store", "electronics_store",
-                          "grocery_store", "hardware_store", "supermarket", "warehouse_store", "airport", "train_station"],
+                          "grocery_store", "hardware_store", "supermarket", "warehouse_store", "airport",
+                          "train_station"],
         "maxResultCount": 8,
         "locationRestriction": {
             "circle": {
@@ -88,6 +89,7 @@ async def get_nearby_places(lat: float, lon: float) -> List[Dict]:
 
     return nearby_places
 
+
 def open_hours_format(opening_hours: List[Dict]) -> Dict[str, Dict[str, str]]:
     """
     Format opening hours from Google Places API.
@@ -96,13 +98,13 @@ def open_hours_format(opening_hours: List[Dict]) -> Dict[str, Dict[str, str]]:
     """
     if not opening_hours:
         return {
-            "Sunday": { "open": "00:00", "close": "23:59" },
-            "Monday": { "open": "00:00", "close": "23:59" },
-            "Tuesday": { "open": "00:00", "close": "23:59" },
-            "Wednesday": { "open": "00:00", "close": "23:59" },
-            "Thursday": { "open": "00:00", "close": "23:59" },
-            "Friday": { "open": "00:00", "close": "23:59" },
-            "Saturday": { "open": "00:00", "close": "23:59" }
+            "Sunday": {"open": "00:00", "close": "23:59"},
+            "Monday": {"open": "00:00", "close": "23:59"},
+            "Tuesday": {"open": "00:00", "close": "23:59"},
+            "Wednesday": {"open": "00:00", "close": "23:59"},
+            "Thursday": {"open": "00:00", "close": "23:59"},
+            "Friday": {"open": "00:00", "close": "23:59"},
+            "Saturday": {"open": "00:00", "close": "23:59"}
         }
 
     day_names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
@@ -116,6 +118,30 @@ def open_hours_format(opening_hours: List[Dict]) -> Dict[str, Dict[str, str]]:
 
     return formatted_hours
 
+
+async def get_place_details(dest_id: str, fields: str) -> Dict:
+    """
+    Fetch place details from Google Places API.
+
+    :param dest_id: Google Places Destination ID
+    :param fields: Fields to fetch
+    :return: Place details
+    """
+    url = f"https://places.googleapis.com/v1/places/{dest_id}?fields={fields}"
+    headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY
+    }
+    res = requests.get(url, headers=headers)
+    if res.status_code != 200:
+        raise HTTPException(status_code=res.status_code, detail=f"Google Places API error: {res.text}")
+    try:
+        response = res.json()
+    except requests.exceptions.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Invalid JSON response from Google Places API")
+    return response
+
+
 @router.get("/")
 async def discover_place_details(dest_id: str = Query(..., min_length=1)) -> Dict:
     """
@@ -123,20 +149,8 @@ async def discover_place_details(dest_id: str = Query(..., min_length=1)) -> Dic
     :param dest_id: Google Places Destination ID
     :return: Place details
     """
-    url = f"https://places.googleapis.com/v1/places/{dest_id}?fields=id,displayName,types,editorialSummary,rating,formattedAddress,internationalPhoneNumber,goodForChildren,accessibilityOptions,photos,location,regularOpeningHours"
-    headers = {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY
-    }
-    res = requests.get(url, headers=headers)
-
-    if res.status_code != 200:
-        raise HTTPException(status_code=res.status_code, detail=f"Google Places API error: {res.text}")
-
-    try:
-        response = res.json()
-    except requests.exceptions.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="Invalid JSON response from Google Places API")
+    fields = "id,displayName,types,editorialSummary,rating,formattedAddress,internationalPhoneNumber,goodForChildren,accessibilityOptions,photos,location,regularOpeningHours"
+    response = await get_place_details(dest_id, fields)
 
     # Fetch photos and nearby places concurrently
     photo_names = [photo["name"] for photo in response.get("photos", [])]
@@ -164,5 +178,6 @@ async def discover_place_details(dest_id: str = Query(..., min_length=1)) -> Dic
         "lat": lat,
         "lon": lon,
         "nearbyPlaces": nearby_places,
-        "openingHours": open_hours_format(response.get("regularOpeningHours")["periods"] if response.get("regularOpeningHours") else [])
+        "openingHours": open_hours_format(
+            response.get("regularOpeningHours")["periods"] if response.get("regularOpeningHours") else [])
     }
