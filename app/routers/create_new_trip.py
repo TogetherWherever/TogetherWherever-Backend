@@ -63,7 +63,8 @@ def creat_new_trip_record(trip: CreateNewTrip, db: Session):
         new_trip_day = TripDays(
             trip_id=new_trip.trip_id,
             day_number=day + 1,
-            date=trip.start_date + timedelta(days=day + 1)
+            date=trip.start_date + timedelta(days=day + 1),
+            vote_status="pending"
         )
 
         db.add(new_trip_day)
@@ -73,13 +74,14 @@ def creat_new_trip_record(trip: CreateNewTrip, db: Session):
     return new_trip
 
 
-def create_recommendations_record(trip_id: int, recommendations: pd.DataFrame, db: Session):
+def create_recommendations_record(trip_id: int, recommendations: pd.DataFrame, db: Session, day_number: int = 1):
     """
     Create a new recommendations record in the database.
 
     :param trip_id: The ID of the trip.
     :param recommendations: The recommendations.
     :param db: Database session.
+    :param day_number: The day number for which the recommendations are created.
     """
     trip_day_id = db.query(TripDays).filter(TripDays.trip_id == trip_id, TripDays.day_number == 1).first().trip_day_id
     for idx, row in recommendations.iterrows():
@@ -93,6 +95,12 @@ def create_recommendations_record(trip_id: int, recommendations: pd.DataFrame, d
         db.add(new_recommendation)
         db.commit()
         db.refresh(new_recommendation)
+
+    # change the vote status to voting
+    trip_day = db.query(TripDays).filter(TripDays.trip_id == trip_id, TripDays.day_number == day_number).first()
+    trip_day.vote_status = "voting"
+    db.commit()
+    db.refresh(trip_day)
 
 
 @router.post('/')
@@ -110,8 +118,6 @@ async def create_new_trip(trip: CreateNewTrip, db: Session = Depends(get_db)):
 
         # Create recommendations
         recommendations = create_recommendations(new_trip.trip_id, trip, db)
-
-        print(recommendations)
 
         # Create recommendations record
         create_recommendations_record(new_trip.trip_id, recommendations, db)
