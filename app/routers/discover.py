@@ -119,15 +119,15 @@ def open_hours_format(opening_hours: List[Dict]) -> Dict[str, Dict[str, str]]:
     return formatted_hours
 
 
-async def get_place_details(dest_id: str, fields: str) -> Dict:
+async def get_place_details(dest_id: str, g_fields: str) -> Dict:
     """
     Fetch place details from Google Places API.
 
     :param dest_id: Google Places Destination ID
-    :param fields: Fields to fetch
+    :param g_fields: Fields to fetch
     :return: Place details
     """
-    url = f"https://places.googleapis.com/v1/places/{dest_id}?fields={fields}"
+    url = f"https://places.googleapis.com/v1/places/{dest_id}?fields={g_fields}"
     headers = {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY
@@ -149,8 +149,8 @@ async def discover_place_details(dest_id: str = Query(..., min_length=1)) -> Dic
     :param dest_id: Google Places Destination ID
     :return: Place details
     """
-    fields = "id,displayName,types,editorialSummary,rating,formattedAddress,internationalPhoneNumber,goodForChildren,accessibilityOptions,photos,location,regularOpeningHours"
-    response = await get_place_details(dest_id, fields)
+    g_fields = "id,displayName,types,editorialSummary,rating,formattedAddress,internationalPhoneNumber,goodForChildren,accessibilityOptions,photos,location,regularOpeningHours"
+    response = await get_place_details(dest_id, g_fields)
 
     # Fetch photos and nearby places concurrently
     photo_names = [photo["name"] for photo in response.get("photos", [])]
