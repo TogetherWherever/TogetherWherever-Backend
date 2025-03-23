@@ -158,7 +158,7 @@ def get_suitable_destinations(destinations: pd.DataFrame, group_profile: List) -
     matched_attractions_mask = destinations['AttractionId'].isin(matched_attractions_named)
     matched_attractions_formatted = destinations[matched_attractions_mask]
 
-    return matched_attractions_formatted
+    return matched_attractions_formatted.head(6)
 
 
 def get_recommendations(travel_group, destinations):
