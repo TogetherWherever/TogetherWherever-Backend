@@ -1,11 +1,12 @@
 from datetime import timedelta
+from typing import List
 
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Trips, TripDays, RecommendedPlaces
+from app.models import Trips, TripDays, RecommendedPlaces, VoteScores
 from app.routers.recommendation_model import get_travel_group_preferences, get_recommendations, \
     get_nearby_destinations_from_api
 from app.schemas import CreateNewTrip
@@ -58,7 +59,7 @@ def creat_new_trip_record(trip: CreateNewTrip, db: Session):
     db.commit()
     db.refresh(new_trip)
 
-    # Create trip days
+    # Create trip days records
     for day in range(trip.duration):
         new_trip_day = TripDays(
             trip_id=new_trip.trip_id,
@@ -83,7 +84,13 @@ def create_recommendations_record(trip_id: int, recommendations: pd.DataFrame, d
     :param db: Database session.
     :param day_number: The day number for which the recommendations are created.
     """
-    trip_day_id = db.query(TripDays).filter(TripDays.trip_id == trip_id, TripDays.day_number == 1).first().trip_day_id
+    trip_day_id = db.query(TripDays).filter(TripDays.trip_id == trip_id,
+                                            TripDays.day_number == day_number).first().trip_day_id
+
+    trip = db.query(Trips).filter(Trips.trip_id == trip_id).first()
+    companions = trip.companion.split(",") if trip.companion else []
+    members = companions + [trip.owner]
+
     for idx, row in recommendations.iterrows():
         new_recommendation = RecommendedPlaces(
             trip_id=trip_id,
@@ -96,11 +103,32 @@ def create_recommendations_record(trip_id: int, recommendations: pd.DataFrame, d
         db.commit()
         db.refresh(new_recommendation)
 
+        create_vote_scores_records(new_recommendation.recommended_place_id, members, db)
+
     # change the vote status to voting
     trip_day = db.query(TripDays).filter(TripDays.trip_id == trip_id, TripDays.day_number == day_number).first()
     trip_day.vote_status = "voting"
     db.commit()
     db.refresh(trip_day)
+
+
+def create_vote_scores_records(recommended_place_id: int, members: List[str], db: Session):
+    """
+    Create a new vote scores record in the database.
+
+    :param recommended_place_id: The ID of the recommended place.
+    :param members: The list of members in the travel group.
+    :param db: Database session.
+    """
+    for member in members:
+        new_vote_score = VoteScores(
+            recommended_place_id=recommended_place_id,
+            username=member,
+        )
+
+        db.add(new_vote_score)
+        db.commit()
+        db.refresh(new_vote_score)
 
 
 @router.post('/')
