@@ -165,14 +165,14 @@ def get_trip_day_details(trip_day_id: int, username: str, db: Session):
 
 
 @router.get("/")
-async def get_planing_details(trip_id: int, username: str, db: Session = Depends(get_db)):
+async def get_planing_details(trip_id: int, username: str, db: Session = Depends(get_db)) -> Dict:
     """
     Get planning details for a trip.
 
-    :param trip_id:
-    :param username:
-    :param db:
-    :return:
+    :param trip_id: The ID of the trip.
+    :param username: The username of the user who is viewing the details.
+    :param db: The database session.
+    :return: The planning details for the trip.
     """
     trip = db.query(Trips).filter(Trips.trip_id == trip_id).first()
 
