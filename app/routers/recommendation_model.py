@@ -158,7 +158,31 @@ def get_suitable_destinations(destinations: pd.DataFrame, group_profile: List) -
     matched_attractions_mask = destinations['AttractionId'].isin(matched_attractions_named)
     matched_attractions_formatted = destinations[matched_attractions_mask]
 
-    return matched_attractions_formatted.head(6)
+    return matched_attractions_formatted
+
+
+def rank_recommended_attractions(suitable_destinations: pd.DataFrame, group_profile: List) -> pd.DataFrame:
+    # Expand AttractionTypeId to multiple rows
+    attractionTypeId_expanded = suitable_destinations['AttractionType'].str.split(',', expand=True).stack().reset_index(
+        level=1, drop=True)
+    attractionTypeId_expanded.name = 'AttractionType_expanded'
+
+    # Merge expanded attraction types with original data
+    recommended_attractions_expanded = suitable_destinations.drop(columns=['AttractionType']).join(
+        attractionTypeId_expanded)
+
+    # Count how many AttractionTypeIds match the group profile
+    recommended_attractions_expanded['match'] = recommended_attractions_expanded['AttractionType_expanded'].isin(
+        group_profile).astype(int)
+
+    # Aggregate matches per attraction
+    attraction_rank = recommended_attractions_expanded.groupby(['AttractionId', 'Attraction'])[
+        'match'].sum().reset_index()
+
+    # Sort by match count in descending order
+    ranked_attractions = attraction_rank.sort_values(by='match', ascending=False)
+
+    return ranked_attractions
 
 
 def get_recommendations(travel_group, destinations):
@@ -169,8 +193,9 @@ def get_recommendations(travel_group, destinations):
     )
 
     suitable_destinations = get_suitable_destinations(destinations, group_profile_lst)
+    ranked_attractions = rank_recommended_attractions(suitable_destinations, group_profile_lst)
 
-    return suitable_destinations
+    return ranked_attractions.head(6)
 
 
 ####################### After Votes #######################
