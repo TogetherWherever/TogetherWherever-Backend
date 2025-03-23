@@ -5,7 +5,8 @@ from app.routers import (
     discover,
     auth,
     create_new_trip,
-    planning_details
+    planning_details,
+    users_data
 )
 
 app = FastAPI()
@@ -23,6 +24,7 @@ app.include_router(discover.router)
 app.include_router(auth.router)
 app.include_router(create_new_trip.router)
 app.include_router(planning_details.router)
+app.include_router(users_data.router)
 
 
 @app.get("/")
