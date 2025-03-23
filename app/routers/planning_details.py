@@ -89,7 +89,7 @@ async def get_destinations_details(dest_id: str) -> Dict:
     place_details = {
         "destID": response.get("id"),
         "destName": response.get("displayName")["text"],
-        "photos": photo,
+        "photo": photo,
         "desc": response.get("editorialSummary")["text"] if response.get("editorialSummary") else "",
         "openingHours": open_hours_format(
             response.get("regularOpeningHours")["periods"] if response.get("regularOpeningHours") else []),
@@ -176,7 +176,10 @@ async def get_planing_details(trip_id: int, username: str, db: Session = Depends
     """
     trip = db.query(Trips).filter(Trips.trip_id == trip_id).first()
 
-    if trip.owner != username and username not in trip.companion.split(","):
+    members = trip.companion.split(",") if trip.companion else []
+    members += [trip.owner]
+
+    if username not in members:
         return {"message": "You are not authorized to view this trip."}
 
     trip_days = db.query(TripDays).filter(TripDays.trip_id == trip_id).all()
@@ -188,7 +191,13 @@ async def get_planing_details(trip_id: int, username: str, db: Session = Depends
         "photo": await get_trip_photo(trip.dest_id),
         "lat": trip.dest_lat,
         "lon": trip.dest_lon,
-        "companion": trip.companion.split(","),
+        "companion": [
+            {
+                "username": user,
+                "profilePic": "not yet implemented"
+            }
+            for user in members
+        ],
         "trip_day": [
             await get_trip_day_details(int(str(trip_day.trip_day_id)), username, db)
             for trip_day in trip_days
