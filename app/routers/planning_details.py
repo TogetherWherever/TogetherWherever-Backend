@@ -100,7 +100,7 @@ async def get_destinations_details(dest_id: str) -> Dict:
     return place_details
 
 
-def get_suitable_dest_list(trip_day_id: int, db: Session) -> List:
+async def get_suitable_dest_list(trip_day_id: int, db: Session) -> List:
     """
     Get the list of suitable destinations for a trip day.
 
@@ -113,13 +113,13 @@ def get_suitable_dest_list(trip_day_id: int, db: Session) -> List:
     suitable_dests = []
 
     for place in places:
-        dest_details = get_destinations_details(str(place.dest_id))
+        dest_details = await get_destinations_details(str(place.dest_id))
         suitable_dests.append(dest_details)
 
     return suitable_dests
 
 
-def get_trip_day_details(trip_day_id: int, username: str, db: Session):
+async def get_trip_day_details(trip_day_id: int, username: str, db: Session):
     """
     Get the details of a trip day.
 
@@ -150,7 +150,7 @@ def get_trip_day_details(trip_day_id: int, username: str, db: Session):
             "members_voted": get_number_of_votes(trip_day_id, members, db),
             "total_members": len(members),
             "user_voted": get_user_vote_status(username, place, db),
-            "suitableDests": get_suitable_dest_list(trip_day_id, db)
+            "suitableDests": await get_suitable_dest_list(trip_day_id, db)
         }
 
     # if status == "complete" return the complete details
@@ -158,7 +158,7 @@ def get_trip_day_details(trip_day_id: int, username: str, db: Session):
         trip_day_details = {
             "day": trip_day.day_number,
             "status": "complete",
-            "suitableDests": get_suitable_dest_list(trip_day_id, db)
+            "suitableDests": "not yet implemented"
         }
 
     return trip_day_details
@@ -190,7 +190,7 @@ async def get_planing_details(trip_id: int, username: str, db: Session = Depends
         "lon": trip.dest_lon,
         "companion": trip.companion.split(","),
         "trip_day": [
-            get_trip_day_details(int(str(trip_day.trip_day_id)), username, db)
+            await get_trip_day_details(int(str(trip_day.trip_day_id)), username, db)
             for trip_day in trip_days
         ]
     }
