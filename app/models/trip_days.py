@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, Date
+from sqlalchemy import Column, Integer, ForeignKey, Date, Enum
 
 from app.models import Base
 
@@ -18,3 +18,4 @@ class TripDays(Base):
     trip_id = Column(Integer, ForeignKey("trips.trip_id"), nullable=False)
     day_number = Column(Integer, nullable=False)  # Day 1, Day 2 etc.
     date = Column(Date)
+    vote_status = Column(Enum("pending", "voting", "complete", name="vote_status_enum"), nullable=False)
