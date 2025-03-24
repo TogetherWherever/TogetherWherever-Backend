@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from typing import List
 
 
-class UserCreate(BaseModel):
+class CreateNewUser(BaseModel):
     """
     Pydantic model for creating a new user.
 
