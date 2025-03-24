@@ -10,14 +10,15 @@ router = APIRouter(prefix="/api/get-users-data", tags=["users-data"])
 
 
 @router.get("/")
-async def get_user_data(db: Session = Depends(get_db)) -> List[Dict]:
+async def get_user_data(username: str, db: Session = Depends(get_db)) -> List[Dict]:
     """
     Get all user data in the database.
 
+    :param username: The username of the user who is requesting the data.
     :param db: Database session.
     :return: List of dictionaries containing user data.
     """
-    users = db.query(User).all()
+    users = db.query(User).filter(User.username != username).all()
 
     user_data = [
         {
