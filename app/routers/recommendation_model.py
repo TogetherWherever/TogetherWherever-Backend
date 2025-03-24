@@ -6,12 +6,27 @@ from dotenv import load_dotenv
 from mlxtend.frequent_patterns import apriori
 from sqlalchemy.orm import Session
 
-from app.models import Trips, User
+from app.models import Trips, User, VoteScores
 from app.routers.discover import get_nearby_places_from_api
 
 load_dotenv()
 
 GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY")
+
+
+def get_members(trip_id: int, db: Session) -> List[str]:
+    """
+    Get the members of the travel group.
+
+    :param trip_id: The ID of the trip.
+    :param db: Database session.
+    :return: List of usernames of the members.
+    """
+    trip = db.query(Trips).filter(Trips.trip_id == trip_id).first()
+    members = trip.companion.split(",") if trip.companion else []
+    members.append(trip.owner)  # Add the owner to the travel group
+
+    return members
 
 
 def get_travel_group_preferences(trip_id: int, db: Session) -> pd.DataFrame:
@@ -23,9 +38,7 @@ def get_travel_group_preferences(trip_id: int, db: Session) -> pd.DataFrame:
     :return: DataFrame containing UserId and Preferences columns.
     """
     # Get the companion IDs
-    trip = db.query(Trips).filter(Trips.trip_id == trip_id).first()
-    companions = trip.companion.split(",") if trip.companion else []
-    companions += [trip.owner]  # Add the owner to the travel group
+    companions = get_members(trip_id, db)
 
     # Get the preferences of the travel group
     travel_group_preferences = (
@@ -166,14 +179,15 @@ def get_recommendations(travel_group, destinations):
 
 ####################### After Votes #######################
 
-def get_votes(trip_id: int) -> pd.DataFrame:
+def get_votes(trip_day_id: int, db: Session) -> pd.DataFrame:
     """
-    Member	000369	000481	000640	000650	000673	000737	000748	000749	000824	000841
-0	52754	7	4	8	5	7	10	3	7	8	5
-1	26150	4	8	8	3	6	5	2	8	6	2
-2	73724	5	1	10	6	9	1	10	3	7	4
+        Member	000369	000481	000640	000650	000673	000737	000748	000749	000824	000841
+    0	52754	7	4	8	5	7	10	3	7	8	5
+    1	26150	4	8	8	3	6	5	2	8	6	2
+    2	73724	5	1	10	6	9	1	10	3	7	4
 
-    :param trip_id:
+    :param trip_day_id: The ID of the trip day.
+    :param db: The database session.
     :return:
     """
     pass

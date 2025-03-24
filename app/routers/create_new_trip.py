@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Trips, TripDays, RecommendedPlaces, VoteScores
 from app.routers.recommendation_model import get_travel_group_preferences, get_recommendations, \
-    get_nearby_destinations
+    get_nearby_destinations, get_members
 from app.schemas import CreateNewTrip
 
 router = APIRouter(prefix="/api/create-new-trip", tags=["create-new-trip"])
@@ -87,9 +87,7 @@ def create_recommendations_record(trip_id: int, recommendations: pd.DataFrame, d
     trip_day_id = db.query(TripDays).filter(TripDays.trip_id == trip_id,
                                             TripDays.day_number == day_number).first().trip_day_id
 
-    trip = db.query(Trips).filter(Trips.trip_id == trip_id).first()
-    companions = trip.companion.split(",") if trip.companion else []
-    members = companions + [trip.owner]
+    members = get_members(trip_id, db)
 
     for idx, row in recommendations.iterrows():
         new_recommendation = RecommendedPlaces(
