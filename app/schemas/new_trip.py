@@ -20,6 +20,8 @@ class CreateNewTrip(BaseModel):
     trip_name: str
     dest_id: str
     dest_name: str
+    dest_lat: float
+    dest_lon: float
     start_date: date
     end_date: date
     duration: int
