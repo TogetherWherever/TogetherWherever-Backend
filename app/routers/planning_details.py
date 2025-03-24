@@ -28,7 +28,7 @@ async def get_trip_photo(dest_id: str) -> str:
 
     photo_names = [photo["name"] for photo in response.get("photos", [])]
 
-    photo = await get_photo(photo_names[0]) if photo_names else ""
+    photo = await get_photo(photo_names[0], "800", "800") if photo_names else ""
 
     return photo
 
@@ -100,6 +100,52 @@ async def get_destinations_details(dest_id: str) -> Dict:
     return place_details
 
 
+def get_morning_activities():
+    """
+
+    :return:
+    """
+    pass
+
+
+def get_afternoon_activities():
+    """
+
+    :return:
+    """
+    pass
+
+
+def get_night_activities():
+    """
+
+    :return:
+    """
+    pass
+
+
+def get_activities_details():
+    """
+
+    :return:
+    """
+    voted_dest = {
+        "morning": get_morning_activities(),
+        "afternoon": get_afternoon_activities(),
+        "night": get_night_activities()
+    }
+
+    return voted_dest
+
+
+def get_distance():
+    """
+
+    :return:
+    """
+    pass
+
+
 async def get_suitable_dest_list(trip_day_id: int, db: Session) -> List:
     """
     Get the list of suitable destinations for a trip day.
@@ -158,7 +204,8 @@ async def get_trip_day_details(trip_day_id: int, username: str, db: Session):
         trip_day_details = {
             "day": trip_day.day_number,
             "status": "complete",
-            "suitableDests": "not yet implemented"
+            "voted_dests": "not yet implemented",
+            "distance": "not yet implemented",
         }
 
     return trip_day_details

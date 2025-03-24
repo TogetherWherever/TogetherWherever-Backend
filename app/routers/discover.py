@@ -14,14 +14,16 @@ router = APIRouter(prefix="/api/discover-place-details", tags=["discover"])
 GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY")
 
 
-async def get_photo(photo_name: str) -> str:
+async def get_photo(photo_name: str, max_height: str = 300, max_width: str = 300) -> str:
     """
     Get a single photo from Google Places API (Place Photo).
     :param photo_name: Photo name
+    :param max_height: The maximum height of the photo.
+    :param max_width: The maximum width of the photo.
     :return: Photo URL
     """
     headers = {'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY}
-    url = f"https://places.googleapis.com/v1/{photo_name}/media?maxHeightPx=300&maxWidthPx=300"
+    url = f"https://places.googleapis.com/v1/{photo_name}/media?maxHeightPx={max_height}&maxWidthPx={max_width}"
     res = requests.get(url, headers=headers, allow_redirects=False)
 
     if res.status_code == 302:  # Google redirects to actual image
