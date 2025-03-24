@@ -8,13 +8,13 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Trips, TripDays, RecommendedPlaces, VoteScores
 from app.routers.recommendation_model import get_travel_group_preferences, get_recommendations, \
-    get_nearby_destinations_from_api
+    get_nearby_destinations
 from app.schemas import CreateNewTrip
 
 router = APIRouter(prefix="/api/create-new-trip", tags=["create-new-trip"])
 
 
-def create_recommendations(trip_id: int, trip: CreateNewTrip, db: Session) -> pd.DataFrame:
+async def create_recommendations(trip_id: int, trip: CreateNewTrip, db: Session) -> pd.DataFrame:
     """
     Create recommendations for a trip.
 
@@ -26,7 +26,7 @@ def create_recommendations(trip_id: int, trip: CreateNewTrip, db: Session) -> pd
     travel_group_preferences = get_travel_group_preferences(trip_id, db)
 
     # Get nearby destinations from Google Places API
-    nearby_places = get_nearby_destinations_from_api(trip.dest_lat, trip.dest_lon)
+    nearby_places = await get_nearby_destinations(trip.dest_lat, trip.dest_lon)
 
     # Get recommendations
     recommendations = get_recommendations(travel_group_preferences, nearby_places)
@@ -145,7 +145,7 @@ async def create_new_trip(trip: CreateNewTrip, db: Session = Depends(get_db)):
         new_trip = creat_new_trip_record(trip, db)
 
         # Create recommendations
-        recommendations = create_recommendations(new_trip.trip_id, trip, db)
+        recommendations = await create_recommendations(new_trip.trip_id, trip, db)
 
         # Create recommendations record
         create_recommendations_record(new_trip.trip_id, recommendations, db)

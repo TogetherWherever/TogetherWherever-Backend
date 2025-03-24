@@ -31,47 +31,17 @@ async def get_photo(photo_name: str) -> str:
         return None
 
 
-async def get_nearby_places(lat: float, lon: float) -> List[Dict]:
+async def get_nearby_places(lat: float, lon: float, max_result: int, radius: int, g_fields: str) -> List[Dict]:
     """
     Get nearby places from Google Places API (Nearby Search).
     :param lat: Latitude
     :param lon: Longitude
+    :param max_result: The number of maximum results to return.
+    :param radius: The radius in meters to search within.
+    :param g_fields: The fields to fetch.
     :return: List of nearby places
     """
-    url = "https://places.googleapis.com/v1/places:searchNearby"
-    payload = json.dumps({
-        # Exclude certain place types to avoid irrelevant results
-        "excludedTypes": ["car_dealer", "car_rental", "car_repair", "car_wash", "electric_vehicle_charging_station",
-                          "gas_station", "parking", "rest_stop", "city_hall", "courthouse", "embassy", "fire_station",
-                          "government_office", "local_government_office", "police", "post_office", "chiropractor",
-                          "dental_clinic", "dentist", "doctor", "drugstore", "hospital", "pharmacy", "physiotherapist",
-                          "medical_lab", "apartment_building", "apartment_complex", "condominium_complex",
-                          "housing_complex", "bed_and_breakfast", "hotel", "motel", "lodging", "accounting", "atm",
-                          "bank", "funeral_home", "insurance_agency", "lawyer", "real_estate_agency", "storage",
-                          "telecommunications_service_provider", "department_store", "electronics_store",
-                          "grocery_store", "hardware_store", "supermarket", "warehouse_store", "airport",
-                          "train_station"],
-        "maxResultCount": 8,
-        "locationRestriction": {
-            "circle": {
-                "center": {
-                    "latitude": lat,
-                    "longitude": lon
-                },
-                "radius": 5000  # Set radius to 5 km
-            }
-        }
-    })
-    headers = {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
-        'X-Goog-FieldMask': 'places.id,places.displayName,places.photos'  # Optimized field mask
-    }
-    res = requests.request("POST", url, headers=headers, data=payload)
-    try:
-        response = res.json()
-    except requests.exceptions.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="Invalid JSON response from Google Places API")
+    response = await get_nearby_places_from_api(g_fields, lat, lon, max_result, radius)
 
     nearby_places = []
     for place in response.get("places", []):
@@ -88,6 +58,44 @@ async def get_nearby_places(lat: float, lon: float) -> List[Dict]:
         nearby_places.append(place_data)
 
     return nearby_places
+
+
+async def get_nearby_places_from_api(g_fields, lat, lon, max_result, radius):
+    url = "https://places.googleapis.com/v1/places:searchNearby"
+    payload = json.dumps({
+        # Exclude certain place types to avoid irrelevant results
+        "excludedTypes": ["car_dealer", "car_rental", "car_repair", "car_wash", "electric_vehicle_charging_station",
+                          "gas_station", "parking", "rest_stop", "city_hall", "courthouse", "embassy", "fire_station",
+                          "government_office", "local_government_office", "police", "post_office", "chiropractor",
+                          "dental_clinic", "dentist", "doctor", "drugstore", "hospital", "pharmacy", "physiotherapist",
+                          "medical_lab", "apartment_building", "apartment_complex", "condominium_complex",
+                          "housing_complex", "bed_and_breakfast", "hotel", "motel", "lodging", "accounting", "atm",
+                          "bank", "funeral_home", "insurance_agency", "lawyer", "real_estate_agency", "storage",
+                          "telecommunications_service_provider", "department_store", "electronics_store",
+                          "grocery_store", "hardware_store", "supermarket", "warehouse_store", "airport",
+                          "train_station"],
+        "maxResultCount": max_result,
+        "locationRestriction": {
+            "circle": {
+                "center": {
+                    "latitude": lat,
+                    "longitude": lon
+                },
+                "radius": radius
+            }
+        }
+    })
+    headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+        'X-Goog-FieldMask': g_fields
+    }
+    res = requests.request("POST", url, headers=headers, data=payload)
+    try:
+        response = res.json()
+    except requests.exceptions.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Invalid JSON response from Google Places API")
+    return response
 
 
 def open_hours_format(opening_hours: List[Dict]) -> Dict[str, Dict[str, str]]:
@@ -157,9 +165,10 @@ async def discover_place_details(dest_id: str = Query(..., min_length=1)) -> Dic
     lat = response.get("location", {}).get("latitude")
     lon = response.get("location", {}).get("longitude")
 
+    g_fields_for_nearby = 'places.id,places.displayName,places.photos'
     photos, nearby_places = await asyncio.gather(
         asyncio.gather(*(get_photo(photo_name) for photo_name in photo_names)) if photo_names else [],
-        get_nearby_places(lat, lon) if lat and lon else []
+        get_nearby_places(lat, lon, 8, 5000, g_fields_for_nearby) if lat and lon else []
     )
 
     return {

@@ -1,15 +1,13 @@
-import json
 import os
 from typing import List
 
 import pandas as pd
-import requests
 from dotenv import load_dotenv
-from fastapi import HTTPException
 from mlxtend.frequent_patterns import apriori
 from sqlalchemy.orm import Session
 
 from app.models import Trips, User
+from app.routers.discover import get_nearby_places_from_api
 
 load_dotenv()
 
@@ -85,48 +83,15 @@ def extract_group_profile(encoded_travel_group: pd.DataFrame) -> pd.DataFrame:
         return group_profile
 
 
-def get_nearby_destinations_from_api(lat: float, lon: float) -> pd.DataFrame:
+async def get_nearby_destinations(lat: float, lon: float) -> pd.DataFrame:
     """
-        Get nearby places from Google Places API (Nearby Search).
-        :param lat: Latitude
-        :param lon: Longitude
-        :return: List of nearby places
-        """
-    url = "https://places.googleapis.com/v1/places:searchNearby"
-    payload = json.dumps({
-        # Exclude certain place types to avoid irrelevant results
-        "excludedTypes": ["car_dealer", "car_rental", "car_repair", "car_wash", "electric_vehicle_charging_station",
-                          "gas_station", "parking", "rest_stop", "city_hall", "courthouse", "embassy", "fire_station",
-                          "government_office", "local_government_office", "police", "post_office", "chiropractor",
-                          "dental_clinic", "dentist", "doctor", "drugstore", "hospital", "pharmacy", "physiotherapist",
-                          "medical_lab", "apartment_building", "apartment_complex", "condominium_complex",
-                          "housing_complex", "bed_and_breakfast", "hotel", "corporate_office", "lodging", "accounting",
-                          "atm", "bank", "funeral_home", "insurance_agency", "lawyer", "real_estate_agency", "storage",
-                          "telecommunications_service_provider", "department_store", "electronics_store",
-                          "grocery_store", "hardware_store", "supermarket", "warehouse_store", "airport",
-                          "train_station"],
-        "maxResultCount": 20,
-        "locationRestriction": {
-            "circle": {
-                "center": {
-                    "latitude": lat,
-                    "longitude": lon
-                },
-                "radius": 8000  # Set radius to 8 km
-            }
-        }
-    })
-    headers = {
-        'Content-Type': 'application/json',
-        'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
-        'X-Goog-FieldMask': 'places.id,places.displayName,places.types'  # Optimized field mask
-    }
-
-    res = requests.request("POST", url, headers=headers, data=payload)
-    try:
-        response = res.json()
-    except requests.exceptions.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="Invalid JSON response from Google Places API")
+    Get nearby places from Google Places API (Nearby Search).
+    :param lat: Latitude
+    :param lon: Longitude
+    :return: List of nearby places
+    """
+    g_fields = 'places.id,places.displayName,places.types'
+    response = await get_nearby_places_from_api(g_fields, lat, lon, 20, 8000)
 
     nearby_places_df = pd.DataFrame(
         [
@@ -144,7 +109,8 @@ def get_nearby_destinations_from_api(lat: float, lon: float) -> pd.DataFrame:
 
 def get_suitable_destinations(destinations: pd.DataFrame, group_profile: List) -> pd.DataFrame:
     # Encode attraction types
-    attraction_expanded = destinations['AttractionType'].str.split(',', expand=True).stack().reset_index(level=1, drop=True)
+    attraction_expanded = destinations['AttractionType'].str.split(',', expand=True).stack().reset_index(level=1,
+                                                                                                         drop=True)
     attraction_expanded.name = 'AttractionType'
     attractions = destinations.drop(columns=['AttractionType']).join(attraction_expanded)
     attractions.dropna(inplace=True)
