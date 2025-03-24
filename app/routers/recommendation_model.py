@@ -4,9 +4,10 @@ from typing import List
 import pandas as pd
 from dotenv import load_dotenv
 from mlxtend.frequent_patterns import apriori
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.models import Trips, User
+from app.models import Trips, User, RecommendedPlaces
 from app.routers.discover import get_nearby_places_from_api
 
 load_dotenv()
@@ -215,16 +216,34 @@ def get_recommendations(travel_group: pd.DataFrame, destinations: pd.DataFrame) 
 
 def get_votes(trip_day_id: int, db: Session) -> pd.DataFrame:
     """
-        Member	000369	000481	000640	000650	000673	000737	000748	000749	000824	000841
-    0	52754	7	4	8	5	7	10	3	7	8	5
-    1	26150	4	8	8	3	6	5	2	8	6	2
-    2	73724	5	1	10	6	9	1	10	3	7	4
+    Retrieve vote scores for a specific trip day and return them as a pivoted DataFrame.
 
     :param trip_day_id: The ID of the trip day.
     :param db: The database session.
-    :return:
+    :return: A Pandas DataFrame with usernames as rows, destination IDs as columns,
+             and vote scores as values.
     """
-    pass
+    # Execute the SQL query using SQLAlchemy
+    query = text("""
+        SELECT vs.username, vs.vote_score, rp.dest_id
+        FROM vote_scores vs
+        JOIN recommended_places rp ON vs.recommended_place_id = rp.recommended_place_id
+        WHERE rp.trip_day_id = :trip_day_id
+    """)
+
+    results = db.execute(query, {"trip_day_id": trip_day_id}).fetchall()
+
+    # Convert results into a Pandas DataFrame
+    df = pd.DataFrame(results, columns=["username", "vote_score", "dest_id"])
+
+    # Pivot the table: usernames as rows, destination IDs as columns, vote_score as values
+    pivot_df = df.pivot(index="username", columns="dest_id", values="vote_score")
+
+    # Reset column names for clarity
+    pivot_df = pivot_df.rename_axis(columns=None).reset_index()
+
+    return pivot_df
+
 
 
 def get_binary_matrix_from_vote(voting_results: pd.DataFrame) -> pd.DataFrame:
@@ -233,8 +252,8 @@ def get_binary_matrix_from_vote(voting_results: pd.DataFrame) -> pd.DataFrame:
     return binary_voting_results
 
 
-def find_frequent_poi_itemsets(binary_voting_results, travel_group: pd.DataFrame) -> pd.DataFrame:
-    for_apriori_df = binary_voting_results.drop(columns=["Member"])
+def find_frequent_poi_itemsets(binary_voting_results: pd.DataFrame, travel_group: pd.DataFrame) -> pd.DataFrame:
+    for_apriori_df = binary_voting_results.drop(columns=["username"])
     members = list(travel_group["UserId"].unique())
 
     if len(members) > 1:
