@@ -9,8 +9,7 @@ router = APIRouter(prefix="/api/vote", tags=["vote"])
 
 
 @router.get("/vote-details")
-async def get_destinations_details_for_vote(trip_id: int, day_number: int, username: str,
-                                            db: Session = Depends(get_db)):
+async def get_destinations_details_for_vote(trip_id: int, day_number: int, username: str, db: Session = Depends(get_db)):
     """
     Get all destinations details for voting.
 
