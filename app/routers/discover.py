@@ -106,7 +106,7 @@ def open_hours_format(opening_hours: List[Dict]) -> Dict[str, Dict[str, str]]:
     :param opening_hours: Opening hours data
     :return: Formatted opening hours
     """
-    if not opening_hours:
+    if not opening_hours or opening_hours[0].get("close") is None:
         return {
             "Sunday": {"open": "00:00", "close": "23:59"},
             "Monday": {"open": "00:00", "close": "23:59"},
