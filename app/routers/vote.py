@@ -1,10 +1,11 @@
 from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import TripDays, Trips, VoteScores
+from app.models import TripDays, Trips
 from app.routers.planning_details import get_planing_details, get_number_of_votes
 from app.routers.recommendation_model import get_members
 from app.schemas import PatchVoteScore
@@ -12,20 +13,21 @@ from app.schemas import PatchVoteScore
 router = APIRouter(prefix="/api/vote", tags=["vote"])
 
 
-def update_vote_status(trip_day_id: int, db: Session):
+def update_vote_status(trip_id: int, trip_day_id: int, db: Session):
     """
     Update the vote status for a trip day.
 
+    :param trip_id: The ID of the trip.
     :param trip_day_id: The ID of the trip day.
     :param db: The database session.
     """
-    members = get_members(trip_day_id, db)
+    members = get_members(trip_id, db)
     vote_counts = get_number_of_votes(trip_day_id, members, db)
     total_members = len(members)
 
     if vote_counts == total_members:
         trip_day = db.query(TripDays).filter(TripDays.trip_day_id == trip_day_id).first()
-        trip_day.vote_status = "completed"
+        trip_day.vote_status = "complete"
         db.commit()
         db.refresh(trip_day)
 
@@ -81,7 +83,7 @@ async def get_destinations_details_for_vote(trip_id: int, day_number: int, usern
 
 
 @router.patch("/submit-vote")
-async def submit_vote_score(vote_score: PatchVoteScore, db: Session = Depends(get_db)) -> Dict:
+async def update_vote_score(vote_score: PatchVoteScore, db: Session = Depends(get_db)) -> Dict:
     """
     Submit and update the vote score for a trip day.
 
@@ -92,28 +94,38 @@ async def submit_vote_score(vote_score: PatchVoteScore, db: Session = Depends(ge
     trip_day = db.query(TripDays).filter(TripDays.trip_id == vote_score.trip_id,
                                          TripDays.day_number == vote_score.trip_day_number).first()
 
-    dest_id_scores = vote_score.scores
+    if not trip_day:
+        raise HTTPException(status_code=404, detail="Trip day not found.")
 
-    for dest_id, score in dest_id_scores.items():
-        vote_score_record = db.query(VoteScores).filter(VoteScores.recommended_place_id == dest_id,
-                                                        VoteScores.username == vote_score.voted_person).first()
-        if vote_score_record.is_voted:
-            raise HTTPException(status_code=400, detail="You have already voted for this destination.")
+    try:
+        for dest_id, score in vote_score.scores.items():
+            db.execute(
+                text("""
+                    UPDATE vote_scores vs
+                    SET vote_score = :new_score, is_voted = TRUE
+                    FROM recommended_places rp
+                    WHERE vs.recommended_place_id = rp.recommended_place_id
+                    AND rp.trip_day_id = :trip_day_id
+                    AND rp.dest_id = :dest_id
+                    AND vs.username = :username;
+                """),
+                {
+                    "new_score": score,
+                    "trip_day_id": trip_day.trip_day_id,
+                    "dest_id": dest_id,
+                    "username": vote_score.voted_person
+                }
+            )
 
-        try:
-            vote_score_record.score = score
-            vote_score_record.is_voted = True
-            db.commit()
-            db.refresh(vote_score_record)
+        db.commit()
 
-            # Update the vote status
-            update_vote_status(trip_day.trip_day_id, db)
+        update_vote_status(vote_score.trip_id, int(str(trip_day.trip_day_id)), db)
 
-        except Exception as e:
-            db.rollback()
-            raise HTTPException(status_code=500, detail=f"Error creating trip: {str(e)}")
+        return {"message": "Vote updated successfully."}
 
-    return {"message": "Vote submitted successfully."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error updating vote: {str(e)}")
 
 
 @router.get("/vote-status")
