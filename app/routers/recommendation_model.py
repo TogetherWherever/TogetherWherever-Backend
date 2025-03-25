@@ -7,7 +7,7 @@ from mlxtend.frequent_patterns import apriori
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.models import Trips, User, RecommendedPlaces
+from app.models import Trips, User
 from app.routers.discover import get_nearby_places_from_api
 
 load_dotenv()
@@ -109,16 +109,18 @@ def extract_group_profile(encoded_travel_group: pd.DataFrame) -> pd.DataFrame:
         return group_profile
 
 
-async def get_nearby_destinations(lat: float, lon: float) -> pd.DataFrame:
+async def get_nearby_destinations(lat: float, lon: float, max_result: int = 20, radius: int = 8000) -> pd.DataFrame:
     """
     Get nearby places from Google Places API (Nearby Search).
 
     :param lat: Latitude
     :param lon: Longitude
+    :param max_result: The maximum number of results to return.
+    :param radius: The radius in meters to search within.
     :return: List of nearby places
     """
     g_fields = 'places.id,places.displayName,places.types'
-    response = await get_nearby_places_from_api(g_fields, lat, lon, 20, 8000)
+    response = await get_nearby_places_from_api(g_fields, lat, lon, max_result, radius)
 
     nearby_places_df = pd.DataFrame(
         [
@@ -245,10 +247,10 @@ def get_votes(trip_day_id: int, db: Session) -> pd.DataFrame:
     return pivot_df
 
 
-
 def get_binary_matrix_from_vote(voting_results: pd.DataFrame) -> pd.DataFrame:
     binary_voting_results = voting_results
     binary_voting_results.iloc[:, 1:] = (binary_voting_results.iloc[:, 1:] >= 5).astype(int)
+
     return binary_voting_results
 
 
