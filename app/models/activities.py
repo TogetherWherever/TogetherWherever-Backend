@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, String, Time
+from sqlalchemy import Column, Integer, ForeignKey, String, Enum, Float
 
 from app.models import Base
 
@@ -21,6 +21,7 @@ class Activities(Base):
     trip_day_id = Column(Integer, ForeignKey("trip_days.trip_day_id"), nullable=False)
     activity_dest_id = Column(String, nullable=False)
     activity_dest_name = Column(String)
-    activity_start_time = Column(Time)
-    activity_end_time = Column(Time)
+    activity_dest_lat = Column(Float)
+    activity_dest_lon = Column(Float)
     activity_number = Column(Integer)  # Activity 1, Activity 2 etc.
+    activity_period = Column(Enum("morning", "afternoon", "night", name="activity_period_enum"), nullable=False, default="morning")
