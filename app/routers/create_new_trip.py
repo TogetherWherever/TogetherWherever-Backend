@@ -84,15 +84,14 @@ def create_recommendations_record(trip_id: int, recommendations: pd.DataFrame, d
     :param db: Database session.
     :param day_number: The day number for which the recommendations are created.
     """
-    trip_day_id = db.query(TripDays).filter(TripDays.trip_id == trip_id,
-                                            TripDays.day_number == day_number).first().trip_day_id
+    trip_day = db.query(TripDays).filter(TripDays.trip_id == trip_id, TripDays.day_number == day_number).first()
 
     members = get_members(trip_id, db)
 
     for idx, row in recommendations.iterrows():
         new_recommendation = RecommendedPlaces(
             trip_id=trip_id,
-            trip_day_id=trip_day_id,
+            trip_day_id=trip_day.trip_day_id,
             dest_id=row["AttractionId"],
             dest_name=row["Attraction"],
         )
@@ -104,7 +103,6 @@ def create_recommendations_record(trip_id: int, recommendations: pd.DataFrame, d
         create_vote_scores_records(new_recommendation.recommended_place_id, members, db)
 
     # change the vote status to voting
-    trip_day = db.query(TripDays).filter(TripDays.trip_id == trip_id, TripDays.day_number == day_number).first()
     trip_day.vote_status = "voting"
     db.commit()
     db.refresh(trip_day)
