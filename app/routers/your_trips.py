@@ -1,6 +1,6 @@
 from typing import List, Dict
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.params import Depends
 from sqlalchemy.orm import Session
 
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/your-trips", tags=["your-trips"])
 
 
 @router.get("/")
-async def get_your_trips(username: str, db: Session = Depends(get_db)) -> List[Dict] | Dict:
+async def get_your_trips(username: str, db: Session = Depends(get_db)) -> List[Dict]:
     """
     Get all trips that the user is in the members list.
 
@@ -23,7 +23,7 @@ async def get_your_trips(username: str, db: Session = Depends(get_db)) -> List[D
     user_exit = db.query(User).filter(User.username == username).all()
 
     if not user_exit:
-        return {"message": "User not found"}
+        raise HTTPException(status_code=404, detail=f"Invalid username: {username}")
 
     trips = db.query(Trips).filter((Trips.owner == username) | Trips.companion.contains(username)).all()
 
