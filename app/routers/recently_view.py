@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Dict
 
 from fastapi import APIRouter, Depends
@@ -57,3 +58,24 @@ async def get_recently_viewed_items(username: str, db: Session = Depends(get_db)
             trip_ids.add(trip_id)  # Use a set for faster lookups
 
     return recently_viewed_items
+
+
+@router.post("/")
+async def add_recently_viewed_item(username: str, view_trip_id: int, db: Session = Depends(get_db)) -> Dict:
+    """
+    Add a new item to the recently viewed list.
+
+    :param username: The username of the user who is requesting the data.
+    :param view_trip_id: The ID of the trip that the user has viewed.
+    :param db: The database session.
+    :return: Dictionary containing the recently viewed data.
+    """
+    recently_view = RecentlyView(
+        username=username,
+        view_trip_id=view_trip_id,
+        view_date_time=datetime.now()
+    )
+    db.add(recently_view)
+    db.commit()
+
+    return {"username": username, "viewTripId": view_trip_id}
