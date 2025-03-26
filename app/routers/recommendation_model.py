@@ -194,13 +194,12 @@ def rank_recommended_attractions(suitable_destinations: pd.DataFrame, group_prof
     return ranked_attractions
 
 
-def get_recommendations(travel_group: pd.DataFrame, destinations: pd.DataFrame, previous_dest: List = None) -> pd.DataFrame:
+def get_recommendations(travel_group: pd.DataFrame, destinations: pd.DataFrame) -> pd.DataFrame:
     """
     Get recommendations for the travel group.
 
     :param travel_group: The dataframe containing the preferences of the travel group.
     :param destinations: The dataframe containing the destinations details.
-    :param previous_dest: The dataframe containing the previous destinations.
     :return: The ranked recommended attractions.
     """
     final_encoded_preferences = one_hot_encode_preferences(travel_group)
@@ -210,10 +209,6 @@ def get_recommendations(travel_group: pd.DataFrame, destinations: pd.DataFrame, 
     )
 
     suitable_destinations = get_suitable_destinations(destinations, group_profile_lst)
-
-    if previous_dest:
-        suitable_destinations = suitable_destinations[~suitable_destinations['AttractionId'].isin(previous_dest)]
-
     ranked_attractions = rank_recommended_attractions(suitable_destinations, group_profile_lst)
 
     return ranked_attractions.head(6)

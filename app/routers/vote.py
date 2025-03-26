@@ -76,15 +76,12 @@ async def create_activities_record(trip_id: int, day_number: int, dest_id_lst: L
     """
     trip_day = db.query(TripDays).filter(TripDays.trip_id == trip_id, TripDays.day_number == day_number).first()
 
-    g_fields = 'id,displayName,regularOpeningHours,location'
+    g_fields = 'id,displayName,location'
 
     activity_number = 1
 
     for dest_id in dest_id_lst:
         dest_detail = await get_place_details(dest_id, g_fields)
-
-        opening_hours = open_hours_format(
-            dest_detail.get("regularOpeningHours")["periods"] if dest_detail.get("regularOpeningHours") else [])
 
         new_activity = Activities(
             trip_day_id=trip_day.trip_day_id,
@@ -93,7 +90,7 @@ async def create_activities_record(trip_id: int, day_number: int, dest_id_lst: L
             activity_dest_lat=dest_detail.get("location", {}).get("latitude"),
             activity_dest_lon=dest_detail.get("location", {}).get("longitude"),
             activity_number=activity_number,
-            activity_period=get_period(opening_hours, trip_day.date)
+            activity_period="morning"
         )
 
         db.add(new_activity)
@@ -148,7 +145,8 @@ async def create_next_day_recommendations(trip_id: int, day_number: int, db: Ses
     trip_day_ids = [day.trip_day_id for day in trip_day]
 
     # Get all previous activity IDs
-    activities_ids = db.query(Activities).filter(Activities.trip_day_id.in_(trip_day_ids)).all()
+    activities = db.query(Activities).filter(Activities.trip_day_id.in_(trip_day_ids)).all()
+    activities_ids = [activity.activity_dest_id for activity in activities]
 
     # Get the recommendations for the next day
     recommendations = await create_recommendations(trip_id, trip.dest_lat, trip.dest_lon, db, activities_ids)

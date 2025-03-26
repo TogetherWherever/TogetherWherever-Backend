@@ -31,8 +31,11 @@ async def create_recommendations(trip_id: int, lat: float, lon: float, db: Sessi
     # Get nearby destinations from Google Places API
     nearby_places = await get_nearby_destinations(lat, lon)
 
+    if previous_dest:
+        nearby_places = nearby_places[~nearby_places["AttractionId"].isin(previous_dest)]
+
     # Get recommendations
-    recommendations = get_recommendations(travel_group_preferences, nearby_places, previous_dest)
+    recommendations = get_recommendations(travel_group_preferences, nearby_places)
 
     return recommendations
 
