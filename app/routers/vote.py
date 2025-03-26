@@ -8,10 +8,11 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import TripDays, Trips, Activities
+from app.routers.create_new_trip import create_recommendations, create_recommendations_record
 from app.routers.discover import get_place_details, open_hours_format
 from app.routers.planning_details import get_planing_details, get_number_of_votes
 from app.routers.recommendation_model import get_members, get_best_destinations, get_travel_group_preferences, \
-    get_nearby_destinations, get_recommendations, one_hot_encode_preferences
+    get_nearby_destinations, get_recommendations
 from app.schemas import PatchVoteScore
 
 router = APIRouter(prefix="/api/vote", tags=["vote"])
@@ -133,13 +134,26 @@ async def create_complete_plan_after_voting(best_dest: pd.DataFrame, trip_id: in
     await create_activities_record(trip_id, day_number, act_dest_lst, db)
 
 
-def create_next_day_recommendations(trip_id: int, day_number: int, db: Session):
+async def create_next_day_recommendations(trip_id: int, day_number: int, db: Session):
     """
     Create recommendations for the next day.
 
-
+    :param trip_id: The unique identifier of the trip.
+    :param day_number: The day number of the trip.
+    :param db: Database session.
     """
-    pass
+    trip = db.query(Trips).filter(Trips.trip_id == trip_id).first()
+    trip_day = db.query(TripDays).filter(TripDays.trip_id == trip_id).all()
+
+    trip_day_ids = [day.trip_day_id for day in trip_day]
+
+    # Get all previous activity IDs
+    activities_ids = db.query(Activities).filter(Activities.trip_day_id.in_(trip_day_ids)).all()
+
+    # Get the recommendations for the next day
+    recommendations = await create_recommendations(trip_id, trip.dest_lat, trip.dest_lon, db, activities_ids)
+
+    create_recommendations_record(trip_id, recommendations, db, day_number)
 
 
 @router.get("/vote-details")
@@ -257,8 +271,8 @@ async def update_vote_score(vote_score: PatchVoteScore, db: Session = Depends(ge
 
         vote_status = update_vote_status(trip_id, trip_day_id, db)
 
-
         if vote_status == "complete":
+            trip_duration = db.query(Trips).filter(Trips.trip_id == trip_id).first().duration
             # get best destination
             travel_group = get_travel_group_preferences(trip_id, db)
 
@@ -266,6 +280,9 @@ async def update_vote_score(vote_score: PatchVoteScore, db: Session = Depends(ge
             best_dest_df = get_best_destinations(trip_day_id, travel_group, destinations, db)
 
             await create_complete_plan_after_voting(best_dest_df, trip_id, day_number, db)
+
+            if day_number < trip_duration:
+                await create_next_day_recommendations(trip_id, day_number + 1, db)
 
         return {"message": "Vote updated successfully."}
 
