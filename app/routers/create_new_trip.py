@@ -14,22 +14,25 @@ from app.schemas import CreateNewTrip
 router = APIRouter(prefix="/api/create-new-trip", tags=["create-new-trip"])
 
 
-async def create_recommendations(trip_id: int, trip: CreateNewTrip, db: Session) -> pd.DataFrame:
+async def create_recommendations(trip_id: int, lat: float, lon: float, db: Session, previous_dest: List = None) -> pd.DataFrame:
     """
     Create recommendations for a trip.
 
     :param trip_id: The ID of the trip.
-    :param trip: The trip details.
+    :param lat: The latitude of the destination.
+    :param lon: The longitude of the destination.
     :param db: Database session.
+    :param previous_dest: The previous destinations from the previous day.
+    :return: The recommendations.
     """
     # Get the travel group preferences
     travel_group_preferences = get_travel_group_preferences(trip_id, db)
 
     # Get nearby destinations from Google Places API
-    nearby_places = await get_nearby_destinations(trip.dest_lat, trip.dest_lon)
+    nearby_places = await get_nearby_destinations(lat, lon)
 
     # Get recommendations
-    recommendations = get_recommendations(travel_group_preferences, nearby_places)
+    recommendations = get_recommendations(travel_group_preferences, nearby_places, previous_dest)
 
     return recommendations
 
@@ -141,7 +144,7 @@ async def create_new_trip(trip: CreateNewTrip, db: Session = Depends(get_db)):
         new_trip = creat_new_trip_record(trip, db)
 
         # Create recommendations
-        recommendations = await create_recommendations(new_trip.trip_id, trip, db)
+        recommendations = await create_recommendations(new_trip.trip_id, new_trip.dest_lat, new_trip.dest_lon, db)
 
         # Create recommendations record
         create_recommendations_record(new_trip.trip_id, recommendations, db)
