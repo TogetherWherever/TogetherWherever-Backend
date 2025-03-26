@@ -272,8 +272,8 @@ def find_frequent_poi_itemsets(binary_voting_results: pd.DataFrame, travel_group
     return frequent_itemsets
 
 
-def get_best_destinations(trip_id: int, travel_group: pd.DataFrame, destinations: pd.DataFrame, db: Session) -> pd.DataFrame:
-    voting_results = get_votes(trip_id, db)
+def get_best_destinations(trip_day_id: int, travel_group: pd.DataFrame, destinations: pd.DataFrame, db: Session) -> pd.DataFrame:
+    voting_results = get_votes(trip_day_id, db)
     binary_voting_results = get_binary_matrix_from_vote(voting_results)
     frequent_itemsets = find_frequent_poi_itemsets(binary_voting_results, travel_group)
 
