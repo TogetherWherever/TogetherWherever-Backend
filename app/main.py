@@ -9,7 +9,8 @@ from app.routers import (
     users_data,
     vote,
     recently_view,
-    your_trips
+    your_trips,
+    user_profile
 )
 
 app = FastAPI()
@@ -31,6 +32,7 @@ app.include_router(users_data.router)
 app.include_router(vote.router)
 app.include_router(recently_view.router)
 app.include_router(your_trips.router)
+app.include_router(user_profile.router)
 
 
 @app.get("/")
