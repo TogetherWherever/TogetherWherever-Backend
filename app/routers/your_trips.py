@@ -18,7 +18,7 @@ async def get_your_trips(username: str, db: Session = Depends(get_db)) -> List[D
 
     :param username: The username of the user who is requesting the data.
     :param db: The database session.
-    :return: The user's trips or a message if the user is not found.`
+    :return: The user's trips or a message if the user is not found.
     """
     user_exit = db.query(User).filter(User.username == username).all()
 

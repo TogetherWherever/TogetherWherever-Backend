@@ -9,8 +9,8 @@ class RecentlyView(Base):
 
     recent_id: Unique identifier for the recently viewed item
     username: Username of the user who viewed the item
-    dest_id: Google Places Destination ID
-    dest_name: Name of the destination
+    view_trip_id: ID of the trip that was viewed
+    view_date_time: Date and time when the item was viewed
     """
     __tablename__ = "recently_viewed"
 
