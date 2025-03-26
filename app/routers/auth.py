@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import User
-from app.schemas import UserCreate
+from app.schemas import CreateNewUser
 
 load_dotenv()
 
@@ -35,7 +35,7 @@ def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
 
 
-def create_user(db: Session, user: UserCreate):
+def create_user(db: Session, user: CreateNewUser):
     hashed_password = pwd_context.hash(user.password)
 
     # Convert list to comma-separated string
@@ -56,7 +56,7 @@ def create_user(db: Session, user: UserCreate):
 
 
 @router.post("/register")
-def register_user(user: UserCreate, db: Session = Depends(get_db)):
+def register_user(user: CreateNewUser, db: Session = Depends(get_db)):
     db_user = get_user_by_username(db, username=user.username)
     if db_user:
         raise HTTPException(status_code=400, detail=f"Username '{user.username}' is already registered")

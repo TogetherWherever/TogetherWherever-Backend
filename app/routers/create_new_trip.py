@@ -8,25 +8,31 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Trips, TripDays, RecommendedPlaces, VoteScores
 from app.routers.recommendation_model import get_travel_group_preferences, get_recommendations, \
-    get_nearby_destinations
+    get_nearby_destinations, get_members
 from app.schemas import CreateNewTrip
 
 router = APIRouter(prefix="/api/create-new-trip", tags=["create-new-trip"])
 
 
-async def create_recommendations(trip_id: int, trip: CreateNewTrip, db: Session) -> pd.DataFrame:
+async def create_recommendations(trip_id: int, lat: float, lon: float, db: Session, previous_dest: List = None) -> pd.DataFrame:
     """
     Create recommendations for a trip.
 
     :param trip_id: The ID of the trip.
-    :param trip: The trip details.
+    :param lat: The latitude of the destination.
+    :param lon: The longitude of the destination.
     :param db: Database session.
+    :param previous_dest: The previous destinations from the previous day.
+    :return: The recommendations.
     """
     # Get the travel group preferences
     travel_group_preferences = get_travel_group_preferences(trip_id, db)
 
     # Get nearby destinations from Google Places API
-    nearby_places = await get_nearby_destinations(trip.dest_lat, trip.dest_lon)
+    nearby_places = await get_nearby_destinations(lat, lon)
+
+    if previous_dest:
+        nearby_places = nearby_places[~nearby_places["AttractionId"].isin(previous_dest)]
 
     # Get recommendations
     recommendations = get_recommendations(travel_group_preferences, nearby_places)
@@ -84,17 +90,14 @@ def create_recommendations_record(trip_id: int, recommendations: pd.DataFrame, d
     :param db: Database session.
     :param day_number: The day number for which the recommendations are created.
     """
-    trip_day_id = db.query(TripDays).filter(TripDays.trip_id == trip_id,
-                                            TripDays.day_number == day_number).first().trip_day_id
+    trip_day = db.query(TripDays).filter(TripDays.trip_id == trip_id, TripDays.day_number == day_number).first()
 
-    trip = db.query(Trips).filter(Trips.trip_id == trip_id).first()
-    companions = trip.companion.split(",") if trip.companion else []
-    members = companions + [trip.owner]
+    members = get_members(trip_id, db)
 
     for idx, row in recommendations.iterrows():
         new_recommendation = RecommendedPlaces(
             trip_id=trip_id,
-            trip_day_id=trip_day_id,
+            trip_day_id=trip_day.trip_day_id,
             dest_id=row["AttractionId"],
             dest_name=row["Attraction"],
         )
@@ -106,7 +109,6 @@ def create_recommendations_record(trip_id: int, recommendations: pd.DataFrame, d
         create_vote_scores_records(new_recommendation.recommended_place_id, members, db)
 
     # change the vote status to voting
-    trip_day = db.query(TripDays).filter(TripDays.trip_id == trip_id, TripDays.day_number == day_number).first()
     trip_day.vote_status = "voting"
     db.commit()
     db.refresh(trip_day)
@@ -145,7 +147,7 @@ async def create_new_trip(trip: CreateNewTrip, db: Session = Depends(get_db)):
         new_trip = creat_new_trip_record(trip, db)
 
         # Create recommendations
-        recommendations = await create_recommendations(new_trip.trip_id, trip, db)
+        recommendations = await create_recommendations(new_trip.trip_id, new_trip.dest_lat, new_trip.dest_lon, db)
 
         # Create recommendations record
         create_recommendations_record(new_trip.trip_id, recommendations, db)

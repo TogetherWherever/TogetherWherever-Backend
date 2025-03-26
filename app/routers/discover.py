@@ -106,27 +106,32 @@ def open_hours_format(opening_hours: List[Dict]) -> Dict[str, Dict[str, str]]:
     :param opening_hours: Opening hours data
     :return: Formatted opening hours
     """
-    if not opening_hours or opening_hours[0].get("close") is None:
-        return {
-            "Sunday": {"open": "00:00", "close": "23:59"},
-            "Monday": {"open": "00:00", "close": "23:59"},
-            "Tuesday": {"open": "00:00", "close": "23:59"},
-            "Wednesday": {"open": "00:00", "close": "23:59"},
-            "Thursday": {"open": "00:00", "close": "23:59"},
-            "Friday": {"open": "00:00", "close": "23:59"},
-            "Saturday": {"open": "00:00", "close": "23:59"}
-        }
+    default_hours = {
+        "Sunday": {"open": "00:00", "close": "23:59"},
+        "Monday": {"open": "00:00", "close": "23:59"},
+        "Tuesday": {"open": "00:00", "close": "23:59"},
+        "Wednesday": {"open": "00:00", "close": "23:59"},
+        "Thursday": {"open": "00:00", "close": "23:59"},
+        "Friday": {"open": "00:00", "close": "23:59"},
+        "Saturday": {"open": "00:00", "close": "23:59"}
+    }
 
     day_names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
-    formatted_hours = {}
-    for period in opening_hours:
-        day = period["open"]["day"]
-        open_time = f"{period['open']['hour']:02d}:{period['open']['minute']:02d}"
-        close_time = f"{period['close']['hour']:02d}:{period['close']['minute']:02d}"
-        formatted_hours[day_names[day]] = {"open": open_time, "close": close_time}
+    if not opening_hours or opening_hours[0].get("close") is None:
+        return default_hours
 
-    return formatted_hours
+    try:
+        formatted_hours = {}
+        for period in opening_hours:
+            day = period["open"]["day"]
+            open_time = f"{period['open']['hour']:02d}:{period['open']['minute']:02d}"
+            close_time = f"{period['close']['hour']:02d}:{period['close']['minute']:02d}"
+            formatted_hours[day_names[day]] = {"open": open_time, "close": close_time}
+
+        return formatted_hours
+    except (KeyError, IndexError):
+        return default_hours
 
 
 async def get_place_details(dest_id: str, g_fields: str) -> Dict:

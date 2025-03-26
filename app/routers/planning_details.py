@@ -1,12 +1,14 @@
+import json
 import os
 from typing import List, Dict
 
+import requests
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Trips, TripDays, RecommendedPlaces, VoteScores
+from app.models import Trips, TripDays, RecommendedPlaces, VoteScores, Activities
 from app.routers.discover import get_photo, get_place_details, open_hours_format
 
 router = APIRouter(prefix="/api/planning-details", tags=["planning-details"])
@@ -100,50 +102,136 @@ async def get_destinations_details(dest_id: str) -> Dict:
     return place_details
 
 
-def get_morning_activities():
+async def get_activities_details(trip_day_id: int, db: Session, period: str = None) -> List:
     """
 
     :return:
     """
-    pass
+    if period:
+        activities = db.query(Activities).filter(Activities.trip_day_id == trip_day_id, Activities.activity_period == period).all()
+    else:
+        activities = db.query(Activities).filter(Activities.trip_day_id == trip_day_id).all()
+
+    activities_details = []
+
+    for activity in activities:
+        activity_details = await get_destinations_details(str(activity.activity_dest_id))
+        activities_details += [activity_details]
+
+    return activities_details
 
 
-def get_afternoon_activities():
+async def get_distance(from_lat: float, from_lon: float, to_lat: float, to_lon: float) -> Dict:
     """
 
     :return:
     """
-    pass
+    url = "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix"
 
-
-def get_night_activities():
-    """
-
-    :return:
-    """
-    pass
-
-
-def get_activities_details():
-    """
-
-    :return:
-    """
-    voted_dest = {
-        "morning": get_morning_activities(),
-        "afternoon": get_afternoon_activities(),
-        "night": get_night_activities()
+    payload = json.dumps({
+        "origins": [
+            {
+                "waypoint": {
+                    "location": {
+                        "latLng": {
+                            "latitude": from_lat,
+                            "longitude": from_lon
+                        }
+                    }
+                },
+                "routeModifiers": {
+                    "avoid_ferries": True
+                }
+            },
+            {
+                "waypoint": {
+                    "location": {
+                        "latLng": {
+                            "latitude": from_lat,
+                            "longitude": from_lon
+                        }
+                    }
+                },
+                "routeModifiers": {
+                    "avoid_ferries": True
+                }
+            }
+        ],
+        "destinations": [
+            {
+                "waypoint": {
+                    "location": {
+                        "latLng": {
+                            "latitude": to_lat,
+                            "longitude": to_lon
+                        }
+                    }
+                }
+            },
+            {
+                "waypoint": {
+                    "location": {
+                        "latLng": {
+                            "latitude": to_lat,
+                            "longitude": to_lon
+                        }
+                    }
+                }
+            }
+        ],
+        "travelMode": "DRIVE",
+        "routingPreference": "TRAFFIC_AWARE"
+    })
+    headers = {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+        'X-Goog-FieldMask': 'originIndex,destinationIndex,duration,distanceMeters'
     }
 
-    return voted_dest
+    res = requests.request("POST", url, headers=headers, data=payload)
+
+    try:
+        response = res.json()
+    except requests.exceptions.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Invalid JSON response from Google Routes API")
+
+    return response
 
 
-def get_distance():
+async def get_distance_details(trip_day_id: int, db: Session) -> List:
     """
 
     :return:
     """
-    pass
+    activities = db.query(Activities).filter(Activities.trip_day_id == trip_day_id).all()
+
+    distance = []
+
+    for number in range(1, len(activities)):
+        from_activity = db.query(Activities).filter(Activities.trip_day_id == trip_day_id, Activities.activity_number == number).first()
+        to_activity = db.query(Activities).filter(Activities.trip_day_id == trip_day_id, Activities.activity_number == number + 1).first()
+
+        from_lat = from_activity.activity_dest_lat
+        from_lon = from_activity.activity_dest_lon
+
+        to_lat = to_activity.activity_dest_lat
+        to_lon = to_activity.activity_dest_lon
+
+        dist = await get_distance(from_lat, from_lon, to_lat, to_lon)
+
+        duration = dist[0].get("duration")
+        duration = int(duration[:-1]) / 60
+
+        distance += [{
+            "from": from_activity.activity_dest_name,
+            "fromID": from_activity.activity_dest_id,
+            "to": to_activity.activity_dest_name,
+            "toID": to_activity.activity_dest_id,
+            "distance_km": dist[0].get("distanceMeters") / 1000,
+            "duration_min": duration
+        }]
+
+    return distance
 
 
 async def get_suitable_dest_list(trip_day_id: int, db: Session) -> List:
@@ -204,8 +292,12 @@ async def get_trip_day_details(trip_day_id: int, username: str, db: Session):
         trip_day_details = {
             "day": trip_day.day_number,
             "status": "complete",
-            "voted_dests": "not yet implemented",
-            "distance": "not yet implemented",
+            "voted_dests": {
+                "morning": await get_activities_details(trip_day_id, db, "morning"),
+                "afternoon": await get_activities_details(trip_day_id, db, "afternoon"),
+                "night": await get_activities_details(trip_day_id, db, "night")
+            },
+            "distance": await get_distance_details(trip_day_id, db),
         }
 
     return trip_day_details

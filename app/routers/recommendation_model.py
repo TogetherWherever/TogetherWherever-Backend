@@ -4,6 +4,7 @@ from typing import List
 import pandas as pd
 from dotenv import load_dotenv
 from mlxtend.frequent_patterns import apriori
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.models import Trips, User
@@ -12,6 +13,21 @@ from app.routers.discover import get_nearby_places_from_api
 load_dotenv()
 
 GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY")
+
+
+def get_members(trip_id: int, db: Session) -> List[str]:
+    """
+    Get the members of the travel group.
+
+    :param trip_id: The ID of the trip.
+    :param db: Database session.
+    :return: List of usernames of the members.
+    """
+    trip = db.query(Trips).filter(Trips.trip_id == trip_id).first()
+    members = trip.companion.split(",") if trip.companion else []
+    members.append(trip.owner)  # Add the owner to the travel group
+
+    return members
 
 
 def get_travel_group_preferences(trip_id: int, db: Session) -> pd.DataFrame:
@@ -23,9 +39,7 @@ def get_travel_group_preferences(trip_id: int, db: Session) -> pd.DataFrame:
     :return: DataFrame containing UserId and Preferences columns.
     """
     # Get the companion IDs
-    trip = db.query(Trips).filter(Trips.trip_id == trip_id).first()
-    companions = trip.companion.split(",") if trip.companion else []
-    companions += [trip.owner]  # Add the owner to the travel group
+    companions = get_members(trip_id, db)
 
     # Get the preferences of the travel group
     travel_group_preferences = (
@@ -43,7 +57,13 @@ def get_travel_group_preferences(trip_id: int, db: Session) -> pd.DataFrame:
     return travel_group_preferences_df
 
 
-def one_hot_encode_preferences(travel_group: pd.DataFrame):
+def one_hot_encode_preferences(travel_group: pd.DataFrame) -> pd.DataFrame:
+    """
+    One-hot encode the preferences of the travel group.
+
+    :param travel_group: The dataframe containing the preferences of the travel group.
+    :return: The one-hot encoded preferences.
+    """
     expanded_preferences = (
         travel_group["Preferences"]
         .str.split(",", expand=True)
@@ -64,6 +84,12 @@ def one_hot_encode_preferences(travel_group: pd.DataFrame):
 
 
 def extract_group_profile(encoded_travel_group: pd.DataFrame) -> pd.DataFrame:
+    """
+    Extract the group profile from the one-hot encoded preferences.
+
+    :param encoded_travel_group: The one-hot encoded preferences.
+    :return: The group profile.
+    """
     if len(encoded_travel_group) > 1:
         min_support = 2 / len(encoded_travel_group)
         frequent_itemsets = apriori(
@@ -83,15 +109,18 @@ def extract_group_profile(encoded_travel_group: pd.DataFrame) -> pd.DataFrame:
         return group_profile
 
 
-async def get_nearby_destinations(lat: float, lon: float) -> pd.DataFrame:
+async def get_nearby_destinations(lat: float, lon: float, max_result: int = 20, radius: int = 8000) -> pd.DataFrame:
     """
     Get nearby places from Google Places API (Nearby Search).
+
     :param lat: Latitude
     :param lon: Longitude
+    :param max_result: The maximum number of results to return.
+    :param radius: The radius in meters to search within.
     :return: List of nearby places
     """
     g_fields = 'places.id,places.displayName,places.types'
-    response = await get_nearby_places_from_api(g_fields, lat, lon, 20, 8000)
+    response = await get_nearby_places_from_api(g_fields, lat, lon, max_result, radius)
 
     nearby_places_df = pd.DataFrame(
         [
@@ -108,6 +137,13 @@ async def get_nearby_destinations(lat: float, lon: float) -> pd.DataFrame:
 
 
 def get_suitable_destinations(destinations: pd.DataFrame, group_profile: List) -> pd.DataFrame:
+    """
+    Get suitable destinations based on the group profile.
+
+    :param destinations: The dataframe containing the destinations details.
+    :param group_profile: The group profile.
+    :return: The dataframe of suitable destinations.
+    """
     # Encode attraction types
     attraction_expanded = destinations['AttractionType'].str.split(',', expand=True).stack().reset_index(level=1,
                                                                                                          drop=True)
@@ -128,6 +164,13 @@ def get_suitable_destinations(destinations: pd.DataFrame, group_profile: List) -
 
 
 def rank_recommended_attractions(suitable_destinations: pd.DataFrame, group_profile: List) -> pd.DataFrame:
+    """
+    Rank recommended attractions based on the group profile.
+
+    :param suitable_destinations: The dataframe of suitable destinations.
+    :param group_profile: The group profile.
+    :return: The ranked attractions.
+    """
     # Expand AttractionTypeId to multiple rows
     attractionTypeId_expanded = suitable_destinations['AttractionType'].str.split(',', expand=True).stack().reset_index(
         level=1, drop=True)
@@ -151,7 +194,14 @@ def rank_recommended_attractions(suitable_destinations: pd.DataFrame, group_prof
     return ranked_attractions
 
 
-def get_recommendations(travel_group, destinations):
+def get_recommendations(travel_group: pd.DataFrame, destinations: pd.DataFrame) -> pd.DataFrame:
+    """
+    Get recommendations for the travel group.
+
+    :param travel_group: The dataframe containing the preferences of the travel group.
+    :param destinations: The dataframe containing the destinations details.
+    :return: The ranked recommended attractions.
+    """
     final_encoded_preferences = one_hot_encode_preferences(travel_group)
     group_profile = extract_group_profile(final_encoded_preferences)
     group_profile_lst = list(
@@ -166,27 +216,46 @@ def get_recommendations(travel_group, destinations):
 
 ####################### After Votes #######################
 
-def get_votes(trip_id: int) -> pd.DataFrame:
+def get_votes(trip_day_id: int, db: Session) -> pd.DataFrame:
     """
-    Member	000369	000481	000640	000650	000673	000737	000748	000749	000824	000841
-0	52754	7	4	8	5	7	10	3	7	8	5
-1	26150	4	8	8	3	6	5	2	8	6	2
-2	73724	5	1	10	6	9	1	10	3	7	4
+    Retrieve vote scores for a specific trip day and return them as a pivoted DataFrame.
 
-    :param trip_id:
-    :return:
+    :param trip_day_id: The ID of the trip day.
+    :param db: The database session.
+    :return: A Pandas DataFrame with usernames as rows, destination IDs as columns,
+             and vote scores as values.
     """
-    pass
+    # Execute the SQL query using SQLAlchemy
+    query = text("""
+        SELECT vs.username, vs.vote_score, rp.dest_id
+        FROM vote_scores vs
+        JOIN recommended_places rp ON vs.recommended_place_id = rp.recommended_place_id
+        WHERE rp.trip_day_id = :trip_day_id
+    """)
+
+    results = db.execute(query, {"trip_day_id": trip_day_id}).fetchall()
+
+    # Convert results into a Pandas DataFrame
+    df = pd.DataFrame(results, columns=["username", "vote_score", "dest_id"])
+
+    # Pivot the table: usernames as rows, destination IDs as columns, vote_score as values
+    pivot_df = df.pivot(index="username", columns="dest_id", values="vote_score")
+
+    # Reset column names for clarity
+    pivot_df = pivot_df.rename_axis(columns=None).reset_index()
+
+    return pivot_df
 
 
 def get_binary_matrix_from_vote(voting_results: pd.DataFrame) -> pd.DataFrame:
     binary_voting_results = voting_results
     binary_voting_results.iloc[:, 1:] = (binary_voting_results.iloc[:, 1:] >= 5).astype(int)
+
     return binary_voting_results
 
 
-def find_frequent_poi_itemsets(binary_voting_results, travel_group: pd.DataFrame) -> pd.DataFrame:
-    for_apriori_df = binary_voting_results.drop(columns=["Member"])
+def find_frequent_poi_itemsets(binary_voting_results: pd.DataFrame, travel_group: pd.DataFrame) -> pd.DataFrame:
+    for_apriori_df = binary_voting_results.drop(columns=["username"])
     members = list(travel_group["UserId"].unique())
 
     if len(members) > 1:
@@ -203,8 +272,8 @@ def find_frequent_poi_itemsets(binary_voting_results, travel_group: pd.DataFrame
     return frequent_itemsets
 
 
-def get_best_destinations(trip_id: int, travel_group: pd.DataFrame, destinations: pd.DataFrame) -> pd.DataFrame:
-    voting_results = get_votes(trip_id)
+def get_best_destinations(trip_day_id: int, travel_group: pd.DataFrame, destinations: pd.DataFrame, db: Session) -> pd.DataFrame:
+    voting_results = get_votes(trip_day_id, db)
     binary_voting_results = get_binary_matrix_from_vote(voting_results)
     frequent_itemsets = find_frequent_poi_itemsets(binary_voting_results, travel_group)
 
