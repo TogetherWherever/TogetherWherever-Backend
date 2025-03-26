@@ -102,13 +102,12 @@ async def get_destinations_details(dest_id: str) -> Dict:
     return place_details
 
 
-async def get_activities_in_period(trip_day_id: int, period: str, db: Session) -> List:
+async def get_activities_details(trip_day_id: int, db: Session) -> List:
     """
 
     :return:
     """
-    activities = db.query(Activities).filter(Activities.trip_day_id == trip_day_id,
-                                             Activities.activity_period == period).all()
+    activities = db.query(Activities).filter(Activities.trip_day_id == trip_day_id).all()
 
     activities_details = []
 
@@ -117,20 +116,6 @@ async def get_activities_in_period(trip_day_id: int, period: str, db: Session) -
         activities_details += [activity_details]
 
     return activities_details
-
-
-async def get_activities_details(trip_day_id: int, db: Session) -> Dict:
-    """
-
-    :return:
-    """
-    voted_dest = {
-        "morning": await get_activities_in_period(trip_day_id, "morning", db),
-        "afternoon": await get_activities_in_period(trip_day_id, "afternoon", db),
-        "night": await get_activities_in_period(trip_day_id, "night", db)
-    }
-
-    return voted_dest
 
 
 async def get_distance(from_lat: float, from_lon: float, to_lat: float, to_lon: float) -> Dict:

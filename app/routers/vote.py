@@ -101,7 +101,7 @@ async def create_activities_record(trip_id: int, day_number: int, dest_id_lst: L
         activity_number += 1
 
 
-async def create_plan_after_voting(best_dest: pd.DataFrame, trip_id: int, day_number: int, db: Session):
+async def create_complete_plan_after_voting(best_dest: pd.DataFrame, trip_id: int, day_number: int, db: Session):
     """
     Create a plan after voting is complete.
 
@@ -265,7 +265,7 @@ async def update_vote_score(vote_score: PatchVoteScore, db: Session = Depends(ge
             destinations = await get_destinations(list(vote_score.scores.keys()))
             best_dest_df = get_best_destinations(trip_day_id, travel_group, destinations, db)
 
-            await create_plan_after_voting(best_dest_df, trip_id, day_number, db)
+            await create_complete_plan_after_voting(best_dest_df, trip_id, day_number, db)
 
         return {"message": "Vote updated successfully."}
 
