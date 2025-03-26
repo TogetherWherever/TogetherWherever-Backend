@@ -122,6 +122,7 @@ async def create_plan_after_voting(best_dest: pd.DataFrame, trip_id: int, day_nu
 
     travel_group_preferences = get_travel_group_preferences(trip_id, db)
     suitable_destinations = get_recommendations(travel_group_preferences, nearby_places)
+    suitable_destinations = suitable_destinations[suitable_destinations["AttractionId"] != best_dest_id]
     suitable_destinations = suitable_destinations.head(4)
 
     act_dest_lst = [best_dest_id]
