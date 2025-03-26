@@ -194,7 +194,7 @@ def rank_recommended_attractions(suitable_destinations: pd.DataFrame, group_prof
     return ranked_attractions
 
 
-def get_recommendations(travel_group: pd.DataFrame, destinations: pd.DataFrame, previous_dest: pd.DataFrame = None) -> pd.DataFrame:
+def get_recommendations(travel_group: pd.DataFrame, destinations: pd.DataFrame, previous_dest: List = None) -> pd.DataFrame:
     """
     Get recommendations for the travel group.
 
@@ -211,8 +211,8 @@ def get_recommendations(travel_group: pd.DataFrame, destinations: pd.DataFrame, 
 
     suitable_destinations = get_suitable_destinations(destinations, group_profile_lst)
 
-    if previous_dest is not None and not previous_dest.empty:
-        suitable_destinations = suitable_destinations[~suitable_destinations['AttractionId'].isin(previous_dest['AttractionId'])]
+    if previous_dest:
+        suitable_destinations = suitable_destinations[~suitable_destinations['AttractionId'].isin(previous_dest)]
 
     ranked_attractions = rank_recommended_attractions(suitable_destinations, group_profile_lst)
 
