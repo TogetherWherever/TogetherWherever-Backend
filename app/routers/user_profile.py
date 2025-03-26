@@ -34,3 +34,26 @@ async def get_user_profile(username: str, db: Session = Depends(get_db)) -> Dict
     }
 
     return result
+
+
+@router.patch("/update-preferences")
+async def update_user_preferences(username: str, preferences: list, db: Session = Depends(get_db)) -> Dict:
+    """
+    Update the user's preferences.
+
+    :param username: The username of the user who is updating the preferences.
+    :param preferences: The list of preferences to update.
+    :param db: The database session.
+    :return: The updated user's preferences.
+    """
+    user = db.query(User).filter(User.username == username).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail=f"Invalid username: {username}")
+
+    # Convert list to comma-separated string
+    user.preferences = ",".join(preferences) if preferences else None
+
+    db.commit()
+
+    return {"message": "User preferences updated successfully"}
