@@ -8,7 +8,7 @@ from app.database import get_db
 from app.models import Trips, TripDays, Activities, User
 from app.routers.planning_details import get_trip_photo
 
-router = APIRouter(prefix="/api/your-trips", tags=["your_trips"])
+router = APIRouter(prefix="/api/your-trips", tags=["your-trips"])
 
 
 @router.get("/")
