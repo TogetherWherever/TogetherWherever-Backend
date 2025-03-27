@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import User, Trips
+from app.schemas import PatchUserPreferences
 
 router = APIRouter(prefix="/api/user-profile", tags=["user-profile"])
 
@@ -40,15 +41,17 @@ async def get_user_profile(username: str, db: Session = Depends(get_db)) -> Dict
 
 
 @router.patch("/update-preferences")
-async def update_user_preferences(username: str, preferences: list, db: Session = Depends(get_db)) -> Dict:
+async def update_user_preferences(new_preferences: PatchUserPreferences, db: Session = Depends(get_db)) -> Dict:
     """
     Update the user's preferences.
 
-    :param username: The username of the user who is updating the preferences.
-    :param preferences: The list of preferences to update.
+    :param new_preferences: The new preferences to update.
     :param db: The database session.
     :return: The updated user's preferences.
     """
+    username = new_preferences.username
+    preferences = new_preferences.preferences
+
     user = db.query(User).filter(User.username == username).first()
 
     if not user:
