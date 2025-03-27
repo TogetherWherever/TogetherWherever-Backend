@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User
+from app.models import User, Trips
 
 router = APIRouter(prefix="/api/user-profile", tags=["user-profile"])
 
@@ -25,12 +25,15 @@ async def get_user_profile(username: str, db: Session = Depends(get_db)) -> Dict
 
     preferences = user.preferences.split(",") if user.preferences else []
 
+    trips_count = db.query(Trips).filter((Trips.owner == username) | Trips.companion.contains(username)).count()
+
     result = {
         "username": user.username,
         "email": user.email,
         "firstName": user.first_name,
         "lastName": user.last_name,
-        "preferences": preferences
+        "preferences": preferences,
+        "tripsCount": trips_count
     }
 
     return result
