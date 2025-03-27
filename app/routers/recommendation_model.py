@@ -211,7 +211,7 @@ def get_recommendations(travel_group: pd.DataFrame, destinations: pd.DataFrame) 
     suitable_destinations = get_suitable_destinations(destinations, group_profile_lst)
     ranked_attractions = rank_recommended_attractions(suitable_destinations, group_profile_lst)
 
-    return ranked_attractions.head(6)
+    return ranked_attractions
 
 
 ####################### After Votes #######################
