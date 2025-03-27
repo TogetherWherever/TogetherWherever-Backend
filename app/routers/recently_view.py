@@ -44,7 +44,7 @@ async def get_recently_viewed_items(username: str, db: Session = Depends(get_db)
             activities_count = db.query(Activities).filter(Activities.trip_day_id.in_(trip_day_ids)).count()
 
             item_data = {
-                "username": item.username,
+                "username": trip.owner,
                 "viewTripId": trip_id,
                 "tripName": trip.trip_name,
                 "startDate": trip.start_date,
