@@ -41,6 +41,7 @@ async def get_your_trips(username: str, db: Session = Depends(get_db)) -> List[D
             "startDate": trip.start_date,
             "endDate": trip.end_date,
             "destinationsNumber": activities_count,
+            "owner": trip.owner,
             "photo": await get_trip_photo(trip.dest_id)
         })
 
