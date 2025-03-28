@@ -374,9 +374,10 @@ async def move_activities(new_order: PatchActivitiesOrder, db: Session = Depends
         .first()
     )
 
+    trip_day_id = trip_day.trip_day_id
     activity1 = (
         db.query(Activities)
-        .filter(Activities.trip_day_id == trip_day.trip_day_id, Activities.activity_number == new_order.oldOrder)
+        .filter(Activities.trip_day_id == trip_day_id, Activities.activity_number == new_order.oldOrder)
         .first()
     )
 
@@ -390,5 +391,11 @@ async def move_activities(new_order: PatchActivitiesOrder, db: Session = Depends
     activity2.activity_number = new_order.oldOrder
 
     db.commit()
+    db.refresh()
+    
+    day_details = {
+        "voted_dests": await get_activities_details(trip_day_id, db),
+        "distance": await get_distance_details(trip_day_id, db),
+    }
 
-    return {"message": "Activities moved successfully."}
+    return day_details
