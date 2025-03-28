@@ -391,7 +391,6 @@ async def move_activities(new_order: PatchActivitiesOrder, db: Session = Depends
     activity2.activity_number = new_order.oldOrder
 
     db.commit()
-    db.refresh()
     
     day_details = {
         "voted_dests": await get_activities_details(trip_day_id, db),

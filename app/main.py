@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from typing import List
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import (
@@ -34,7 +35,23 @@ app.include_router(recently_view.router)
 app.include_router(your_trips.router)
 app.include_router(user_profile.router)
 
+connected_clients: List[WebSocket] = []
+
 
 @app.get("/")
 async def read_root():
     return {"message": "Welcome to TogetherWherever API!"}
+
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    connected_clients.append(websocket)
+    try:
+        while True:
+            data = await websocket.receive_json()
+            for client in connected_clients:
+                await client.send_json(data)  # Broadcast to all clients
+    except WebSocketDisconnect:
+        connected_clients.remove(websocket)
