@@ -1,4 +1,5 @@
 from typing import List
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -43,15 +44,18 @@ async def read_root():
     return {"message": "Welcome to TogetherWherever API!"}
 
 
+active_connections: List[WebSocket] = []
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    connected_clients.append(websocket)
+    active_connections.append(websocket)
     try:
         while True:
-            data = await websocket.receive_json()
-            for client in connected_clients:
-                await client.send_json(data)  # Broadcast to all clients
+            data = await websocket.receive_text()
+            for connection in active_connections:
+                await connection.send_text(data)  # Broadcast to all clients
     except WebSocketDisconnect:
-        connected_clients.remove(websocket)
+        active_connections.remove(websocket)
+        print("Client disconnected")
