@@ -8,8 +8,8 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import TripDays, Trips, Activities
-from app.routers.create_new_trip import create_recommendations, create_recommendations_record
-from app.routers.discover import get_place_details, open_hours_format
+from app.routers.create_new_trip import create_recommendations, create_recommendations_record, check_open_time
+from app.routers.discover import get_place_details
 from app.routers.planning_details import get_planing_details, get_number_of_votes
 from app.routers.recommendation_model import get_members, get_best_destinations, get_travel_group_preferences, \
     get_nearby_destinations, get_recommendations
@@ -76,27 +76,34 @@ async def create_activities_record(trip_id: int, day_number: int, dest_id_lst: L
     """
     trip_day = db.query(TripDays).filter(TripDays.trip_id == trip_id, TripDays.day_number == day_number).first()
 
-    g_fields = 'id,displayName,location'
+    g_fields = 'id,displayName,location,regularOpeningHours'
 
     activity_number = 1
 
     for dest_id in dest_id_lst:
         dest_detail = await get_place_details(dest_id, g_fields)
+        opening_hours = dest_detail.get("regularOpeningHours")["periods"] if dest_detail.get("regularOpeningHours") else []
 
-        new_activity = Activities(
-            trip_day_id=trip_day.trip_day_id,
-            activity_dest_id=dest_id,
-            activity_dest_name=dest_detail.get('displayName')["text"],
-            activity_dest_lat=dest_detail.get("location", {}).get("latitude"),
-            activity_dest_lon=dest_detail.get("location", {}).get("longitude"),
-            activity_number=activity_number,
-            activity_period="morning"
-        )
+        is_open = await check_open_time(dest_id, trip_day.date, opening_hours)
 
-        db.add(new_activity)
-        db.commit()
+        if is_open:
+            new_activity = Activities(
+                trip_day_id=trip_day.trip_day_id,
+                activity_dest_id=dest_id,
+                activity_dest_name=dest_detail.get('displayName')["text"],
+                activity_dest_lat=dest_detail.get("location", {}).get("latitude"),
+                activity_dest_lon=dest_detail.get("location", {}).get("longitude"),
+                activity_number=activity_number,
+                activity_period="morning"
+            )
 
-        activity_number += 1
+            db.add(new_activity)
+            db.commit()
+
+            activity_number += 1
+
+        if activity_number >= 6:
+            break
 
 
 async def create_complete_plan_after_voting(best_dest: pd.DataFrame, trip_id: int, day_number: int, db: Session):
@@ -121,7 +128,7 @@ async def create_complete_plan_after_voting(best_dest: pd.DataFrame, trip_id: in
     travel_group_preferences = get_travel_group_preferences(trip_id, db)
     suitable_destinations = get_recommendations(travel_group_preferences, nearby_places)
     suitable_destinations = suitable_destinations[suitable_destinations["AttractionId"] != best_dest_id]
-    suitable_destinations = suitable_destinations.head(4)
+    suitable_destinations = suitable_destinations
 
     act_dest_lst = [best_dest_id]
 
@@ -151,7 +158,7 @@ async def create_next_day_recommendations(trip_id: int, day_number: int, db: Ses
     # Get the recommendations for the next day
     recommendations = await create_recommendations(trip_id, trip.dest_lat, trip.dest_lon, db, activities_ids)
 
-    create_recommendations_record(trip_id, recommendations, db, day_number)
+    await create_recommendations_record(trip_id, recommendations, db, day_number)
 
 
 @router.get("/vote-details")

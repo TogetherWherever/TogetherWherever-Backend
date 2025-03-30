@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Trips, TripDays, RecommendedPlaces, VoteScores, Activities
 from app.routers.discover import get_photo, get_place_details, open_hours_format
+from app.schemas import PatchActivitiesOrder
 
 router = APIRouter(prefix="/api/planning-details", tags=["planning-details"])
 
@@ -104,13 +105,27 @@ async def get_destinations_details(dest_id: str) -> Dict:
 
 async def get_activities_details(trip_day_id: int, db: Session, period: str = None) -> List:
     """
+    Get the details of activities for a trip day.
 
+    :param trip_day_id: The ID of the trip day.
+    :param db: Database session.
+    :param period: The period of the activity. e.g. "morning", "afternoon", "evening"
     :return:
     """
     if period:
-        activities = db.query(Activities).filter(Activities.trip_day_id == trip_day_id, Activities.activity_period == period).all()
+        activities = (
+            db.query(Activities)
+            .filter(Activities.trip_day_id == trip_day_id, Activities.activity_period == period)
+            .order_by(Activities.activity_number.asc())
+            .all()
+        )
     else:
-        activities = db.query(Activities).filter(Activities.trip_day_id == trip_day_id).all()
+        activities = (
+            db.query(Activities)
+            .filter(Activities.trip_day_id == trip_day_id)
+            .order_by(Activities.activity_number.asc())
+            .all()
+        )
 
     activities_details = []
 
@@ -340,3 +355,46 @@ async def get_planing_details(trip_id: int, username: str, db: Session = Depends
     }
 
     return trip_details
+
+
+@router.patch("/move-activities")
+async def move_activities(new_order: PatchActivitiesOrder, db: Session = Depends(get_db)) -> Dict:
+    """
+    Move the activities in a trip day.
+
+    :param new_order: The new order of the activities.
+    :param db: The database session.
+    :return: The updated order of the activities.
+    """
+    trip_id = new_order.tripId
+
+    trip_day = (
+        db.query(TripDays)
+        .filter(TripDays.trip_id == trip_id, TripDays.day_number == new_order.tripDay)
+        .first()
+    )
+
+    trip_day_id = trip_day.trip_day_id
+    activity1 = (
+        db.query(Activities)
+        .filter(Activities.trip_day_id == trip_day_id, Activities.activity_number == new_order.oldOrder)
+        .first()
+    )
+
+    activity2 = (
+        db.query(Activities)
+        .filter(Activities.trip_day_id == trip_day.trip_day_id, Activities.activity_number == new_order.newOrder)
+        .first()
+    )
+
+    activity1.activity_number = new_order.newOrder
+    activity2.activity_number = new_order.oldOrder
+
+    db.commit()
+    
+    day_details = {
+        "voted_dests": await get_activities_details(trip_day_id, db),
+        "distance": await get_distance_details(trip_day_id, db),
+    }
+
+    return day_details
